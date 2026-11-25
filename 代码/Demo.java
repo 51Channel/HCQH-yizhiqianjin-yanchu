@@ -25,15 +25,18 @@ final class Demo {
     String word = "游戏规则";
     double len;
     /**
-     * 开头的黑场片名卡有几秒（11-23「要有那种电影感」）：片名在 PRE − 1.6 秒砸下来，PRE 秒硬切进场景。
+     * 开头的黑场片名卡有几秒（11-23「要有那种电影感」）：片名在 SLAM 秒落定；11-25 加了气口（「你连一个气口都没有」）：
+     * 字在 PRE − 1 秒开始淡、最后 0.6 秒全黑，PRE 秒起场景从黑里亮起来，所以 PRE 从 3.6 加到 4.4。
      * 脚本里写的时间都从片名卡后面算起（off 一开始就是 PRE），各场的演示脚本不用改。
      */
-    static final double PRE = 3.6;
+    static final double PRE = 4.4, SLAM = 2.0;
     /** 之后写的时间都往后挪 off 秒（开头插一段大白话总结时，后面的脚本不用一个个改时间）。 */
     double off = PRE;
     final JsonArray shots = new JsonArray(), caps = new JsonArray();
     final List<Object[]> acts = new ArrayList<>();
     final List<Entity> props = new ArrayList<>();
+    /** 演示里身上描红边的人（盲牌演示讲内鬼那一屏）：所有人的屏幕上都描，借内鬼看同伙那一套（ZdShow.isMate）。改了要 pushState。 */
+    final List<java.util.UUID> glow = new ArrayList<>();
     final List<Runnable> cleanup = new ArrayList<>();
     final List<String[]> lines = new ArrayList<>();   // {秒, 一句}：没装模组的人在聊天里看
 

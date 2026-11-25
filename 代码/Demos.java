@@ -65,15 +65,15 @@ final class Demos {
      */
     static Demo zero(Match m) {
         Demo d = new Demo(Match.cn(1), Match.A_NAMES[0]);
-        double o = 7;
+        double o = 3;   // 11-25 审查：开头 7 秒空镜没有字，压到 3 秒
         d.shot(0, 3, v(C, 108, 84), v(C, 103, 76), v(C, 73, 4), v(C, 73, 4), 58, true);
-        d.shot(3, o, ring(14, 75, 88), ring(13, 75, 87.5), ring(39, 255, 76), ring(39, 255, 76), 50, true);
         // 11-23 用户：「把这种最简单、最低成本、最快速的让人了解完这个游戏的玩法，说那些话就行……最简单一句话去说」——开头先一句话讲完
-        d.gist(o, 6, "每人选一个数：离目标最远的人，掉进水里", "", ring(13, 75, 87.5), ring(12, 70, 88), ring(39, 255, 76), 50);
+        // 11-25 审查：第一屏说「离目标最远」却没说目标是什么——小字直接交代
+        d.gist(o, 6, "选一个 0 到 100 的数：全场平均乘 0.8 是目标", "离目标最远的人，脚下翻板，掉进水里", ring(13, 75, 87.5), ring(12, 70, 88), ring(39, 255, 76), 50);
         // ① 大白话：有哪些数、怎么算目标、谁站得住
         d.cap(o + 0, o + 5.8, "0 到 100，匿名选数", "用投票器选好，没人看得见", false);
         d.shot(o + 0, o + 6, ring(31, 214, 80.6), ring(31, 236, 80.4), ring(40, 232, 76.3), ring(40, 256, 76.3), 52, true);
-        d.cap(o + 6, o + 11.8, "时间到，算出目标", "全场的平均数，乘 0.8", true);
+        d.cap(o + 6, o + 11.8, "时间到，指针转到目标上", "", false);   // 公式开头说过了，这里只看指针
         d.shot(o + 6, o + 12, ring(4, 180, 92), ring(9, 0, 89), ring(39, Venue.thV(50), 76), ring(39, Venue.thV(50), 76), 60, true);
         d.at(o + 6.4, () -> { m.scene.dt(80); m.scene.needle(50); });
         sfx(m, d, o + 10.4, "reveal", 0.55f, 1.1f);   // 11-23 音效只留这一下（「音效不是说你加满它就是好的」）
@@ -121,8 +121,11 @@ final class Demos {
         d.at(o + 30.3, () -> { m.scene.mark(80, 1); m.scene.mark(64, 0); });
         d.at(o + 32.2, () -> { m.scene.drop(80); m.soundV("hechao_zhidou:zd.trap", 1f, 1.05f); for (int i : new int[]{0, 1, 2, 4}) sink(m, d, a[i]); });
         // ④ 不给答案，留给他自己想
-        d.cap(o + 35.5, o + 41, "最后几轮掉下去，这一场出局", "前几轮掉下去会受伤，还能爬回来接着选", false);
-        d.shot(o + 35.5, o + 41.5, ring(14, 75, 88), ring(18, 60, 90), ring(39, 255, 76), ring(39, 250, 74), 56, true);
+        // 11-25 审查：原来对着空场干念——同一个机位看翻板合上、掉下去的两个人爬回板上
+        d.cap(o + 35.5, o + 41, "前几轮掉下去，还能爬回来接着选", "最后几轮掉下去，这一场出局", false);
+        d.still(o + 35.5, o + 41.5, ring(30, Venue.thV(80) + 12, 80.4), ring(39, Venue.thV(80), 76.3), 58);
+        d.at(o + 36.6, () -> m.scene.plateReset());
+        d.at(o + 37.8, () -> { place(m, a[0], Venue.onPlate(m.world, 80, 0.3)); place(m, a[1], Venue.onPlate(m.world, 82, 0.6)); });
         d.cleanup.add(() -> { m.scene.plateReset(); m.scene.needlePark(); m.scene.ballsPark(); for (int v : new int[]{50, 61, 64, 77, 80, 100}) m.scene.mark(v, -1); });
         return d;
     }
@@ -132,6 +135,12 @@ final class Demos {
         Location from = e.getLocation(); double y0 = from.getY();
         m.demoTween(d, 12, k -> { if (e.isValid()) { Location l = from.clone(); l.setY(y0 - (y0 - 58.4) * k * k); e.teleport(l); } });
         m.later(16, () -> { if (e.isValid()) splash(m, e); });
+    }
+    /** 让 e 转过来面朝 t（只转身子，不挪位置）。 */
+    static void face(Entity e, Entity t) {
+        if (e == null || t == null) return;
+        double dx = t.getX() - e.getX(), dz = t.getZ() - e.getZ();
+        e.setRotation((float) Math.toDegrees(Math.atan2(-dx, dz)), 0);
     }
     /** 示范的人换到另一块板上（冒一下烟）。 */
     static void place(Match m, Mannequin e, Location l) { if (e == null || !e.isValid()) return; e.teleport(l); puff(m, l); }
@@ -146,7 +155,8 @@ final class Demos {
         d.gist(0, 5, "物品栏上的心，就是你的命", "", ring(74, 0, 116), ring(68, 0, 110), v(C, 68, C), 58);
         d.cap(0.2, 4.8, "每一场游戏输了，都会受伤", "心扣光，就出局", true, false);
         d.shot(0, 5, ring(68, 0, 110), ring(62, 0, 105), v(C, 68, C), v(C, 68, C), 58, true);
-        d.cap(5.1, 10.2, "六场游戏，一场一场往下打", "活到最后的那 1 个人，才能通关", false, false);
+        // 11-25 审查：「六场游戏、1 个人通关」片头已经说过——这里补片头没说的：出局了去哪
+        d.cap(5.1, 10.2, "越往后的游戏，伤得越重", "撑到最后的人，坐上坑底牌桌和主持人决战", false, false);
         d.shot(5, 10.6, ring(47, 352, 119), ring(45, 6, 118), v(C, 66, C), v(C, 66, C), 60, true);   // 11-25 实拍：r57 高 102 时外圈吊环和指针尖的钢塔横在字幕上；退进吊环里、抬到 118 往下看就干净了
         return d;
     }
@@ -157,9 +167,8 @@ final class Demos {
         boolean door = mode == 1;
         int[] picks = door ? new int[]{6, 14, 22, 92} : new int[]{3, 6, 9, 15, 95};
         int bad = 0;
-        double o = 7;
+        double o = 3;   // 11-25 审查：开头空镜压到 3 秒
         d.shot(0, 3, v(C, 108, 84), v(C, 103, 76), v(C, 73, 4), v(C, 73, 4), 58, true);
-        d.shot(3, o, ring(14, 75, 88), ring(13, 75, 87.5), ring(39, 255, 76), ring(39, 255, 76), 50, true);
         d.gist(o, 5.5, door ? "选一道门站进去：人最多的那道门，整道翻下去" : "选一段站进去：人最多的那一段，整段翻下去", "掉下去会受伤", ring(13, 75, 87.5), ring(12, 70, 88), ring(39, 255, 76), 50);
         d.cap(o, o + 5.8, door ? "尺子环分成 A、B、C 三道门" : "尺子环分成 1 到 10 十段", door ? "在投票器上匿名选一道" : "在投票器上匿名选一段", false);
         d.shot(o, o + 6, ring(31, 214, 80.6), ring(31, 236, 80.4), ring(40, 232, 76.3), ring(40, 256, 76.3), 52, true);
@@ -216,7 +225,8 @@ final class Demos {
         YAt y = (x, zz) -> beamY(x);
         Mannequin[] p = new Mannequin[4];
         d.shot(0, 3, v(20, 142, BZ + 64), v(22, 138, BZ + 58), v(24, 118, BZ - 4), v(24, 118, BZ - 4), 64, true);
-        d.gist(3, 5.5, "走过钢梁，到对面那栋楼", "", v(22, 138, BZ + 58), v(18, 133, BZ + 50), v(24, 118, BZ - 4), 64);
+        // 11-25 审查：「名额有限、超时受伤」原来拖到最后一屏才说，前面看不懂为什么要急、为什么要推人——放进第一屏
+        d.gist(3, 5.5, "抢在别人前面，走过钢梁：每根梁名额有限，过满通电", "时间到没走到对面，会受伤", v(22, 138, BZ + 58), v(18, 133, BZ + 50), v(24, 118, BZ - 4), 64);
         d.at(0.1 - d.off, () -> {   // 一开场就有人站在梁上：远景里看得见
             p[0] = m.demoActor(d, new Location(m.world, -2, Y, z0, -90, 0), 3);
             p[1] = m.demoActor(d, new Location(m.world, 13, Y, z1, -90, 0), 4);
@@ -228,7 +238,9 @@ final class Demos {
         d.shot(3, 9, v(-7, 122.5, z0 + 1.7), v(5, 122.5, z0 + 1.7), v(-1, 120.9, z0), v(11, 120.9, z0), 62, false);
         wobble(m, d, () -> p[0], z0, 3, -2, 9, 10, 0.75, 0.22);
         // ② 起风：一个蹲下，一个站着被吹下去，被接住送回起点
-        d.cap(9, 14.8, "起风了，按住 Shift", "不蹲下，会被直接吹下去", false);
+        d.cap(9, 12.2, "起风了，按住 Shift", "不蹲下，会被直接吹下去", false);
+        // 11-25 审查：「掉下去回起点重来」原来写在最后一屏，和「通电之后回不去」前后打架——放到被吹下去、在起点冒出来的这一拍
+        d.cap(12.2, 14.8, "掉下去，回起点重来", "", false);
         d.still(9, 12.2, v(16, 123.4, z2 + 5.5), v(14.5, 120.6, z1), 64);
         d.at(9.2, () -> { for (int t = 0; t < 60; t += 3) m.later(t, () -> { if (m.curDemo == d) m.windFx(1); }); m.soundV("hechao_zhidou:zd.gust", 0.9f, 1f); });
         sfx(m, d, 10.8, "hurt", 0.6f, 1f);   // 11-23 音效只留这一下（「音效不是说你加满它就是好的」）
@@ -260,11 +272,20 @@ final class Demos {
         d.at(26.3, () -> { if (p[3].isValid()) { p[3].playHurtAnimation(0); m.world.spawnParticle(Particle.ELECTRIC_SPARK, p[3].getLocation().add(0, 1, 0), 60, 0.3, 0.5, 0.3, 0.3, null, true); } });
         fall(m, d, () -> p[3], 26.4, 14, 18, 0, 1.6);
         sfx(m, d, 26.3, "shock", 1f, 1f);   // 11-23 音效只留这一下（「音效不是说你加满它就是好的」）
-        d.cap(31, 35.5, "挡路的人，左键能推", "被推的人照屏幕提示按鼠标，按错就掉下去", true);
-        d.still(31, 36, v(22, 139, BZ + 60), v(24, 119, BZ - 2), 66);
-        // 11-25 开头那句拆出来的：名额、超时、掉下去怎样，单独一屏（闸门外、梁上方往对面看）
-        d.cap(36, 40.5, "每根梁，名额有限", "时间到没走到会受伤 · 掉下去回起点重来", true);
-        d.shot(36, 41, v(-19, 123.2, BZ + 6), v(-14.5, 122.9, BZ + 6), v(18, 116.5, BZ + 2), v(18, 116.5, BZ + 2), 58, true);
+        // 11-25 审查：原来对着远景干念——真演一次：后面的人追上来推一把，前面的人晃两下掉下去（最后一屏「名额有限」挪到开头了）
+        d.cap(31, 36, "挡路的人，左键能推", "被推的人照屏幕提示按鼠标，按错就掉下去", true);
+        double z7 = Venue.beamZ(7);   // 换一根没通电的梁演（前面通电的那几根梁上还亮着电）
+        Mannequin[] pu = new Mannequin[2];
+        d.at(30.9, () -> {
+            pu[0] = m.demoActor(d, new Location(m.world, 24, Y, z7, -90, 0), 9);
+            pu[1] = m.demoActor(d, new Location(m.world, 21.2, Y, z7, -90, 0), 8);
+        });
+        track(m, d, () -> pu[1], y, new double[]{31.1, 21.2, z7}, new double[]{32.4, 23.0, z7});
+        d.still(31, 36.5, v(19.5, 122.3, z7 + 3.4), v(23.5, 120.6, z7), 60);
+        d.at(32.5, () -> { if (pu[1] != null && pu[1].isValid()) pu[1].swingMainHand(); if (pu[0] != null && pu[0].isValid()) pu[0].playHurtAnimation(0); });
+        wobble(m, d, () -> pu[0], z7, 32.6, 24, 33.6, 24.6, 0.25, 0.35);
+        fall(m, d, () -> pu[0], 33.7, 14, 18, 0.3, 2.2);
+        sfx(m, d, 32.5, "hurt", 0.6f, 1.1f);
         d.cleanup.add(() -> {
             for (int b = 0; b < Venue.B_N; b++) {
                 m.scene.set("bzb" + (b + 1) + ".var", -1);
@@ -276,8 +297,8 @@ final class Demos {
 
     // ================= 第三幕 · 盲牌 =================
     /**
-     * 三个人头上各一个花色（两个方块、一个红心），走进方块的牢区：先到的两个人各进了一间亮绿灯的独房（其中一个其实是红心，进错了），
-     * 晚到的那个没有房间。门关上、揭晓：进对的门打开；进错的项圈放电；没进独房的也放电。
+     * 三个人头上各一个花色（两个方块、一个红心），走进方块的牢区：先到的两个人各进了一间亮绿灯的房间（其中一个其实是红心，进错了），
+     * 晚到的那个没有房间。门关上、揭晓：进对的门打开；进错的项圈放电；没进房间的也放电。
      */
     static Demo prison(Match m) {
         Demo d = new Demo(Match.cn(2), Match.N_HALL);
@@ -286,8 +307,10 @@ final class Demos {
         int[] col = {2, 1, 2};
         Who[] w = new Who[3];
         YAt y = (x, zz) -> PY;
-        d.shot(0, 3, v(HX + 9, 76.8, HZ - 9), v(HX + 8, 76.5, HZ - 8), v(HX, 70.5, HZ + 5), v(HX, 70.5, HZ + 5), 66, true);
-        d.gist(3, 6, "背后有花色：进同花色的独房", "进错了，项圈放电，这一场直接出局", v(HX + 8, 76.5, HZ - 8), v(HX + 7, 76.3, HZ - 7), v(HX, 70.5, HZ + 5), 66);
+        // 11-25 第二版审查：① 第一屏先说「自己看不见、要问别人」；② 大字原来正好压在看守所柱子的规则牌上（白字叠白字）——镜头往左转、压低一点，柱子挪到画面右边，前排的人背后的花色拍大一些
+        double[] gl = v(HX + 5.5, 70.6, HZ + 10);
+        d.shot(0, 3, v(HX + 8, 75.6, HZ - 8), v(HX + 7, 75.3, HZ - 7), gl, gl, 62, true);
+        d.gist(3, 6, "自己看不见背后的花色：只能问别人，进对应房间", "进错了，项圈放电，这一场直接出局", v(HX + 7, 75.3, HZ - 7), v(HX + 6.2, 75.0, HZ - 6.2), gl, 62);
         // 演示的时候场上的人先请到北边牢区里（镜头都在南边，拍不到），演完回看守所、戴回项圈——不然三个示范的人混在三十个人里认不出来
         List<Who> crowd = new java.util.ArrayList<>(m.alive());
         d.at(2.95, () -> {   // 开头那句大白话的镜头切走的那一刻再请走（那个镜头里大家头上的花色正好看得见）
@@ -302,12 +325,16 @@ final class Demos {
                 w[i] = new Who("示范", null, e); w[i].color = col[i]; m.lampOn(w[i]);
             }
         });
-        d.cap(3, 8.8, "自己看不见，转身给别人看", "按住 Shift 蹲下，能把牌盖住", false);
+        d.cap(3, 8.8, "转过身，给别人看你的花色", "按住 Shift 蹲下，能把牌盖住", false);
         d.at(5.6, () -> { if (w[2] != null) { w[2].covered = true; m.lampOn(w[2]); if (w[2].dummy != null) w[2].dummy.setPose(Pose.SNEAKING, true); } });    // 右边那个人蹲下把牌盖上，再站起来
         d.at(8.0, () -> { if (w[2] != null) { w[2].covered = false; m.lampOn(w[2]); if (w[2].dummy != null) w[2].dummy.setPose(Pose.STANDING, true); } });
+        // 11-25 审查：原来三个人一直背对镜头，接着就分头进房，看不出是怎么知道自己花色的——左边两个先互相看一眼背后
+        d.at(6.2, () -> { if (w[0] != null && w[1] != null) face(w[1].body(), w[0].body()); });   // 中间那个转过来看左边那个的背
+        d.at(7.4, () -> { if (w[0] != null && w[1] != null) face(w[0].body(), w[1].body()); });   // 左边那个也转过来，看中间那个
+        d.at(8.6, () -> { for (int i = 0; i < 2; i++) { Entity e = w[i] == null ? null : w[i].body(); if (e != null) e.setRotation(180, 0); } });
         d.still(3, 9, v(HX, 73.6, HZ + 9.6), v(HX, 71.5, HZ + 4.4), 50);   // 11-25「牌子被中间那个人的头挡住了」：机位抬高往下看，后面柱子上的规则牌露在三个人头顶上面   // 从牢区里往回看：三个人背对镜头，项圈后面的花色牌都在画面里
-        d.cap(9, 15.3, "问清自己的花色，再走进那一区的独房", "告诉你花色的人，可能在骗你", false);
-        d.still(9, 15.5, v(HX, 72.6, HZ + 21), v(HX, 70.9, HZ + 11.5), 62);   // 从走廊尽头往回看：人朝镜头走过来，分头进两边的独房
+        d.cap(9, 15.3, "问清自己的花色，再走进那一区的房间", "告诉你花色的人，可能在骗你", false);
+        d.still(9, 15.5, v(HX, 72.6, HZ + 21), v(HX, 70.9, HZ + 11.5), 62);   // 从走廊尽头往回看：人朝镜头走过来，分头进两边的房间
         d.at(9.1, () -> { m.setCell(Z, 0, true); m.setCell(Z, 1, true); });
         {
             double[] a0 = Venue.pw(Z, 6.5, -1.5), a1 = Venue.pw(Z, 10.5, -0.6), a2 = Venue.pw(Z, 16, -2.2), a3 = Venue.pw(Z, 16, -4.0), a4 = Venue.pw(Z, 16, -5.8);
@@ -319,14 +346,14 @@ final class Demos {
         }
         d.at(13.7, () -> { m.cOwner[Z][1] = w[0]; w[0].cellD = Z; w[0].cellI = 1; m.scene.set("hcl" + Z + "_1.var", 2); });
         d.at(14.1, () -> { m.cOwner[Z][0] = w[1]; w[1].cellD = Z; w[1].cellI = 0; m.scene.set("hcl" + Z + "_0.var", 2); });
-        d.cap(15.5, 20.8, "门关上之前，进好独房", "没进独房，一样算错", false);
+        d.cap(15.5, 20.8, "门关上之前，进好房间", "没进房间，一样算错", false);
         d.still(15.5, 21, v(HX, 73.2, HZ + 11), v(HX, 70.8, HZ + 17), 62);
         d.at(16.9, () -> { Entity e = w[2].body(); if (e != null) e.setRotation(90, 0); });
         d.at(17.9, () -> { Entity e = w[2].body(); if (e != null) e.setRotation(-90, 0); });
         d.at(18.9, () -> { Entity e = w[2].body(); if (e != null) e.setRotation(0, 0); });
         d.cap(21, 26, "门一关，当场揭晓", "进对了：绿灯亮、门打开，这一轮活下来", false);
         {   // 11-25：原来和上一步几乎同一个机位，像硬切了一下——改成对的那间（左边 1 号）门口的近景
-            // 11-25 实拍：没进独房的那个人半个身子挡在画面右边——机位往左挪 1.8 格，他整个出画，门还在画面里
+            // 11-25 实拍：没进房间的那个人半个身子挡在画面右边——机位往左挪 1.8 格，他整个出画，门还在画面里
             double[] j0 = Venue.pw(Z, 11, -1.0), j1 = Venue.pw(Z, 16, -5.2);
             d.still(21, 26.3, v(j0[0], 72.4, j0[1]), v(j1[0], 71.2, j1[1]), 60);
         }
@@ -338,10 +365,10 @@ final class Demos {
             m.cOpen[Z][1] = true;
         });
         sfx(m, d, 23.4, "door", 0.85f, 1.1f);   // 11-23 音效只留这一下（「音效不是说你加满它就是好的」）
-        // 11-25「走到这个门口，他穿模了」：不再让人从独房里走出来，只亮绿灯、开门
+        // 11-25「走到这个门口，他穿模了」：不再让人从房间里走出来，只亮绿灯、开门
         // 11-23（「花色的这一段感觉演出有一点问题」）：原来是广角从背后拍，放电的人背对镜头、进错门的人关在门里，画面上看不出发生了什么。
-        // 改成两镜：先正面近景看没进独房的那个人被电（他正好朝着镜头），再切到进错的那一间门口，红灯亮、门缝里冒电火花。放电自己有声音（zap），不另加。
-        d.cap(26.3, 31.3, "进错了，项圈放电", "会受伤，这一场直接出局", true);
+        // 改成两镜：先正面近景看没进房间的那个人被电（他正好朝着镜头），再切到进错的那一间门口，红灯亮、门缝里冒电火花。放电自己有声音（zap），不另加。
+        d.cap(26.3, 31.3, "进错或没进房，项圈放电", "会受伤，这一场直接出局", true);   // 11-25 审查：先电的是没进房的那个，字要对上
         d.still(26.3, 28.9, v(HX, 72.0, HZ + 19.4), v(HX, 71.2, HZ + 15.4), 50);
         d.at(26.8, () -> { m.zap(w[2]); if (w[2].body() instanceof org.bukkit.entity.LivingEntity le) le.playHurtAnimation(0); });
         {
@@ -349,9 +376,24 @@ final class Demos {
             d.still(28.9, 31.5, v(k0[0], 72.0, k0[1]), v(k1[0], 71.0, k1[1]), 55);
         }
         d.at(29.3, () -> m.zap(w[1]));
+        // 11-25 审查：原来讲内鬼、重新发牌时对着远景干念——两个人回到一开始那块地方：先描红边互相看（内鬼互相认识），再背过身、花色当场换一张
         d.cap(31.5, 36, m.jacks.size() + " 个内鬼，互相认识", "内鬼全死，好人全赢 · 好人不比内鬼多，内鬼赢", true);
         d.cap(36.2, 40, "每一轮，重新发牌", "一直打到内鬼全死，或者内鬼赢", false);
-        d.shot(31.5, 40.2, v(HX + 8, 76.5, HZ - 8), v(HX + 9, 76.8, HZ - 9), v(HX, 70.5, HZ + 5), v(HX, 70.5, HZ + 5), 66, true);
+        d.still(31.5, 40.2, v(HX, 73.6, HZ + 9.6), v(HX, 71.5, HZ + 4.4), 50);
+        d.at(31.4, () -> {
+            double[] l0 = Venue.pw(Z, 6.5, -1.5), l2 = Venue.pw(Z, 6.6, 1.5);
+            Entity e0 = w[0].body(), e2 = w[2].body();
+            if (e0 != null) m.move(e0, new Location(m.world, l0[0], PY, l0[1], 180, 0));
+            if (e2 != null) { m.move(e2, new Location(m.world, l2[0], PY, l2[1], 180, 0)); if (e2 instanceof org.bukkit.entity.LivingEntity le) le.setPose(Pose.STANDING, true); }
+            // 中间那个人也站回原位（背对镜头），挡住地上通往方块牢区的蓝色引导线，不然它正好竖在字幕中间
+            Entity e1 = w[1].body();
+            if (e1 != null) { double[] l1 = Venue.pw(Z, 6.5, 0); m.move(e1, new Location(m.world, l1[0], PY, l1[1], 180, 0)); if (e1 instanceof org.bukkit.entity.LivingEntity le) le.setPose(Pose.STANDING, true); }
+            m.later(1, () -> { face(e0, e2); face(e2, e0); });
+            if (e0 != null) d.glow.add(e0.getUniqueId()); if (e2 != null) d.glow.add(e2.getUniqueId());
+            m.pushState();
+        });
+        d.at(36.2, () -> { d.glow.clear(); m.pushState(); for (int i : new int[]{0, 2}) { Entity e = w[i].body(); if (e != null) e.setRotation(180, 0); } });
+        d.at(37.6, () -> { for (int i : new int[]{0, 2}) { w[i].color = (w[i].color + 1) % 4; m.lampOn(w[i]); Entity e = w[i].body(); if (e != null) m.world.spawnParticle(Particle.CLOUD, e.getLocation().add(0, 1.6, 0), 6, 0.15, 0.1, 0.15, 0.01, null, true); } });
         d.cleanup.add(() -> { for (Who x : w) if (x != null) m.lampOff(x); m.prisonClose(); });
         return d;
     }
@@ -360,14 +402,14 @@ final class Demos {
         Demo d = new Demo(Match.cn(4), Match.D_NAMES[0]);
         int games = Rules.ecardGames(m.fast), per = Rules.ecardPer(m.fast);   // 11-23：6 局、每 3 局换边（快节奏 4 局、每 2 局）
         d.shot(0, 3, v(C + 6, 72, C + 5), v(C + 4.4, 69.4, C + 3.6), v(C, 65.9, C), v(C, 65.9, C), 55, true);
-        d.gist(3, 6, "和主持人打 " + games + " 局：奴隶赢皇帝", "赢了通关，拿走神秘大奖；输了，脚下的活板翻开", v(C + 4.4, 69.4, C + 3.6), v(C + 3.9, 69, C + 3.2), v(C, 65.9, C), 55);
+        d.gist(3, 6, "皇帝赢市民，市民赢奴隶：奴隶赢皇帝", "和主持人打 " + games + " 局，赢了通关拿大奖，输了活板翻开", v(C + 4.4, 69.4, C + 3.6), v(C + 3.9, 69, C + 3.2), v(C, 65.9, C), 55);
         double[] near = v(C + 2.3, 68.3, C + 2.5), table = v(C, 65.9, C + 0.1);
         d.cap(3, 9, "一边拿皇帝，一边拿奴隶", "另外各 4 张市民", false);
         d.shot(3, 27, near, v(C + 2.0, 68.4, C + 2.7), table, table, 52, true);
         d.at(3.3, () -> { m.hostEmp = true; m.ecSides(); m.ecDeal(); });
-        d.cap(9, 15, "两边同时扣下一张牌", "点面前的牌出牌 · 右键「洗牌」打乱顺序", false);
+        d.cap(9, 15, "两边同时扣下一张牌", "牌扣下后不能再改，同时翻开", false);
         d.at(10.0, () -> { m.ecPut(true, 3); m.ecPut(false, 4); });
-        d.cap(15, 21, "同时翻牌", "市民碰市民作废，接着出", false);
+        d.cap(15, 21, "同时翻牌", "市民碰市民作废，接着出", false);   // 克制链第一屏讲过了
         d.at(15.4, () -> { m.ecFlip(true); m.ecFlip(false); });
         sfx(m, d, 15.4, "flip", 0.9f, 1f);   // 11-23 音效只留这一下（「音效不是说你加满它就是好的」）
         d.at(18.2, () -> { m.ecDiscard(true); m.ecDiscard(false); });

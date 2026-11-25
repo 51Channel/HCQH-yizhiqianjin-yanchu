@@ -53,7 +53,7 @@ public final class Cine {
     private static final List<Cap> DCAPS = new ArrayList<>();
     private static String dKick = "", dTitle = "", dWord = "游戏规则";
     /** 演示开头的黑场片名卡有几秒（插件发 pre；片名在 SLAM 秒砸下来，pre 秒硬切进场景）。 */
-    private static float dPre; private static final float SLAM_BEFORE_CUT = 1.6f;
+    private static float dPre; private static final float SLAM_AT = 2.0f, CARD_OUT = 1.0f, CARD_BLACK = 0.6f;   // 片名落定在第 2 秒；切进场景前 1 秒字开始淡，最后 0.6 秒全黑（11-25 气口）
     private static String host = "", next = ""; private static int count;
     private static final List<String[]> acts = new ArrayList<>();
     private static int bankDone; private static SoundInstance music;
@@ -73,7 +73,7 @@ public final class Cine {
         SHOTS.add(new Shot(t, t += MONT, ring(30, 248, 80.5), ring(30, 262, 80.2), ring(40, 280, 76.3), ring(40, 294, 76.3), 52, false));   // 一 尺子环
         SHOTS.add(new Shot(t, t += MONT, v(-19, 123.2, BZ + 6), v(-14.5, 122.9, BZ + 6), v(18, 116.5, BZ + 2), v(18, 116.5, BZ + 2), 58, false));   // 二 渡桥：闸门外、梁上方往对面看（闸门上挂着规则牌，机位要在它前面）
         SHOTS.add(new Shot(t, t += MONT, v(HX, 72.6, C + 11), v(HX, 72.5, C + 16.5), v(HX, 71.6, C + 36), v(HX, 71.6, C + 36), 55, false));   // 三 监狱（盲牌）
-        SHOTS.add(new Shot(t, t += MONT, v(-54, 71.6, 296.1), v(-57, 71.5, 296.1), v(-12, 70.8, 299.0), v(-12, 70.8, 299.0), 60, false));   // 四 失控列车：车窗外顺着车身往前看
+        SHOTS.add(new Shot(t, t += MONT, v(3.5, 72.5, 298.4), v(2.2, 72.4, 298.8), v(-3, 72.4, 300.0), v(-3, 72.45, 300.0), 55, false));   // 四 失控列车：第 4 节车厢里，慢慢靠近吊着的金丝雀笼子（11-25 原来车窗外拍的是一面车身墙）
         SHOTS.add(new Shot(t, t += MONT, ring(8.2, 50, 70.6), ring(8.2, 62, 70.6), ring(13.2, 56, 67.9), ring(13.2, 64, 67.9), 60, false));   // 五 限定猜拳：轮盘环上的对决桌（11-25：原来扫的 25°–37° 正好在两张桌子中间，拍到空地；桌子在 0/60/120/240/300°）
         SHOTS.add(new Shot(t, t += MONT, v(C + 4.4, 69.4, C + 3.6), v(C + 3.5, 68.8, C + 2.7), v(C, 65.9, C - 0.6), v(C, 66.0, C - 0.9), 50, false));   // 六 弑君的牌桌（正南有通关席的椅背挡着，从东南边高一点看）
         // 选手：起点平台上三排，镜头在他们前面从左（东）往右（西）扫
@@ -261,6 +261,7 @@ public final class Cine {
         rect(g, 0, 0, w, bars, solid(0x000000)); rect(g, 0, h - bars, w, bars, solid(0x000000));
         if (demo) { demoText(g, w, h, bars, t); return; }
         opSounds(t);
+        float dk = opDip(t); if (dk > 0) rect(g, 0, 0, w, h, a(0x000000, dk));   // 换镜头的气口（字画在它上面）
         if (t < T_LIGHT + 1.2f) hook(g, w, h, t);
         else if (t >= T_MONT && t < T_LINE) {
             int k = Math.min(5, (int) ((t - T_MONT) / MONT));
@@ -274,6 +275,27 @@ public final class Cine {
         float black = span(t, T_BLACK, T_BLACK + 0.8f);
         if (black > 0) rect(g, 0, 0, w, h, a(0x000000, black));
     }
+    /**
+     * 11-25 用户：「你这个全黑屏，第一幕什么，第二幕什么，然后缝突然就切到那个你连一个气口都没有」——
+     * 每次换镜头都先压黑、在黑里切、再亮起来；六幕快切完到「选手入场」之间多停一拍黑。时间点对着配乐，一个都不挪，只在切点两边借几分之一秒。
+     */
+    private static float opDip(float t) {
+        float k = 0;
+        for (int i = 0; i <= 5; i++) k = Math.max(k, dip(t, T_MONT + i * MONT, 0.3f, 0, 0.35f));
+        k = Math.max(k, dip(t, T_LINE, 0.6f, 0.35f, 0.7f));
+        k = Math.max(k, dip(t, T_HOST, 0.3f, 0.1f, 0.4f));
+        k = Math.max(k, dip(t, T_DARE, 0.3f, 0.1f, 0.4f));
+        k = Math.max(k, dip(t, T_TITLE, 0.35f, 0.1f, 0.5f));
+        return k;
+    }
+    /** 切点 c 前 out 秒压黑，全黑停 hold 秒，再用 in 秒亮回来（两头缓）。 */
+    private static float dip(float t, float c, float out, float hold, float in) {
+        if (t < c - out || t > c + hold + in) return 0;
+        if (t < c) return ease(span(t, c - out, c));
+        if (t < c + hold) return 1;
+        return 1 - ease(span(t, c + hold, c + hold + in));
+    }
+    private static float ease(float x) { return x * x * (3 - 2 * x); }
     private static float span(float t, float a, float b) { return Math.max(0, Math.min(1, (t - a) / (b - a))); }
     private static float out(float x) { return 1 - (1 - x) * (1 - x) * (1 - x); }
 
@@ -305,22 +327,23 @@ public final class Cine {
     /**
      * 规则演示的画面（11-23 重做：「虽然是一句话讲完，但是演出方式还是太没意思了。有没有更厉害的演出啊？……这个演出要有那种电影感」）：
      * <ol>
-     *   <li>黑场片名卡（0 – pre 秒）：先亮一行小字「第几幕」，底下一口气越吸越紧（插件放 swell），片名在 pre − 1.6 秒「砸」下来（放大一下落定、白闪、画面一震，插件放 braam），然后硬切进场景。</li>
+     *   <li>黑场片名卡（0 – pre 秒）：先亮一行小字「第几幕」，底下一口气越吸越紧（插件放 swell），片名在第 2 秒收拢落定（插件放 braam），切进场景前 1 秒字淡掉、停 0.6 秒全黑，场景再用 1 秒从黑里亮起来（11-25 气口）。</li>
      *   <li>一句话讲完（gist）：画面正中两行大字，冒号前后各一行，一行一行落下来（插件每行放一下 hit），数字金色、「掉 / 受伤 / 出局」这种红色；小字最后出来。</li>
      *   <li>一步一步：像电影字幕，底下居中一行，不写 1 2 3 步数；「输了会怎样」那一步镜头往里一冲、一震，四边压一圈暗红（插件放 subdrop）。</li>
-     *   <li>一直有：宽银幕黑边、四角压暗、一层很淡的胶片颗粒；最后一下硬切黑，回到自己的第一人称。</li>
+     *   <li>一直有：宽银幕黑边、四角压暗、一层很淡的胶片颗粒；最后 0.8 秒淡黑（11-25 原来是硬切黑，「连一个气口都没有」），回到自己的第一人称。</li>
      * </ol>
      */
     private static void demoText(GuiGraphics g, int w, int h, float bars, float t) {
         float L = demoLen;
         if (t < dPre) { titleCard(g, w, h, t); return; }
         film(g, w, h, t);
+        float up = 1 - ease(span(t, dPre, dPre + 1.0f)); if (up > 0) rect(g, 0, 0, w, h, a(0x000000, up));   // 11-25 气口：片名卡停一拍黑之后，场景从黑里慢慢亮起来（字画在它上面）
         text(g, Face.MEDIUM, spaced(dTitle + " · " + dWord), w / 2f, (bars - 8) / 2, 0.7f, 1, INK_QUIET, span(t, dPre + 0.3f, dPre + 0.9f), false);
         Cap newest = null;   // 同一时刻只画最新开始的那一句
         for (Cap c : DCAPS) if (t >= c.t0 && (newest == null || c.t0 >= newest.t0)) newest = c;
         for (Cap c : DCAPS) if (c.red && t >= c.t0 && t < c.t0 + 1.4f) redPulse(g, w, h, 1 - (t - c.t0) / 1.4f);
         if (newest != null && t <= newest.t1 + 0.4f) { if (newest.gist) tagline(g, w, h, t, newest); else subtitle(g, w, h, bars, t, newest); }
-        if (t > L - 0.55f) rect(g, 0, 0, w, h, solid(0x000000));   // 硬切黑，不慢慢淡
+        float end = ease(span(t, L - 0.9f, L - 0.1f)); if (end > 0) rect(g, 0, 0, w, h, a(0x000000, end));   // 11-25 结尾不再硬切黑，0.8 秒淡下去
     }
     /**
      * 黑场片名卡。11-23 换掉了「砸下来 + 白闪 + 画面一抖」（「好像打雷一样的那个特效其实有点弱智，我不喜欢，换一种演出效果」）：
@@ -328,16 +351,16 @@ public final class Cine {
      */
     private static void titleCard(GuiGraphics g, int w, int h, float t) {
         rect(g, 0, 0, w, h, solid(0x000000));
-        float slam = dPre - SLAM_BEFORE_CUT, cy = h * 0.46f, sc = 3.3f;
-        float ka = span(t, 0.3f, 0.9f) * (1 - span(t, dPre - 0.15f, dPre));
+        float slam = SLAM_AT, fo = 1 - span(t, dPre - CARD_OUT, dPre - CARD_BLACK), cy = h * 0.46f, sc = 3.3f;
+        float ka = span(t, 0.3f, 0.9f) * fo;
         text(g, Face.MEDIUM, spaced(dKick), w / 2f, cy - 46, 0.9f, 1, GOLD, ka, false);
         float in = t - (slam - 0.5f); if (in < 0) return;   // 比原来砸下来的时刻早半拍开始收，收拢落定正好在原来那一下
-        float k = out(span(in, 0, 1.1f)), al = span(in, 0, 0.6f) * (1 - span(t, dPre - 0.12f, dPre));
+        float k = out(span(in, 0, 1.1f)), al = span(in, 0, 0.6f) * fo;
         int[] cps = dTitle.codePoints().toArray(); float[] cw = new float[cps.length]; float sum = 0;
         for (int i = 0; i < cps.length; i++) { cw[i] = width(Face.DISPLAY, new String(Character.toChars(cps[i]))) * sc; sum += cw[i]; }
         float gap = sc * 13 * (1 - k), x = w / 2f - (sum + gap * (cps.length - 1)) / 2;
         for (int i = 0; i < cps.length; i++) { line(g, Face.DISPLAY, x + cw[i] / 2, cy, sc, al, new String(Character.toChars(cps[i])), INK); x += cw[i] + gap; }
-        text(g, Face.MEDIUM, spaced(dWord), w / 2f, cy + D_DN * sc + 20, 0.85f, 1, INK_SOFT, span(in, 1.1f, 1.5f) * (1 - span(t, dPre - 0.12f, dPre)), false);
+        text(g, Face.MEDIUM, spaced(dWord), w / 2f, cy + D_DN * sc + 20, 0.85f, 1, INK_SOFT, span(in, 1.1f, 1.5f) * fo, false);
     }
     /** 一句话讲完：冒号前后两行大字一行一行落下来，小字最后。 */
     static final float TAG_P2 = 1.3f, TAG_SUB = 2.6f;
@@ -459,8 +482,19 @@ public final class Cine {
 
     /** 一整条宽的暗带：中间最暗，上下两头淡出去。 */
     private static void band(GuiGraphics g, int w, float y0, float y1, float alpha) {
-        int n = 16; float step = (y1 - y0) / n;
-        for (int k = 0; k < n; k++) { float m = 1 - Math.abs((k + 0.5f) / n * 2 - 1), ya = Math.round(y0 + k * step), yb = Math.round(y0 + (k + 1) * step); rect(g, 0, ya, w, yb - ya, a(0x000000, alpha * (float) Math.sqrt(m))); }
+        // 11-25 第二版审查：原来是 16 条实心横条拼的，亮窗前面看得出一级一级的台阶——改成一段一段的真渐变（每段首尾颜色接上），没有台阶
+        if (alpha <= 0 || y1 <= y0) return;
+        int n = 12; float step = (y1 - y0) / n;
+        for (int k = 0; k < n; k++) {
+            int ya = Math.round(y0 + k * step), yb = Math.round(y0 + (k + 1) * step);
+            if (yb <= ya) continue;
+            g.fillGradient(0, ya, w, yb, a(0x000000, alpha * bandAt((float) k / n)), a(0x000000, alpha * bandAt((float) (k + 1) / n)));
+        }
+    }
+    /** 暗带在 f（0 顶 ~ 1 底）处的浓度：中间最浓，两头淡到 0。 */
+    private static float bandAt(float f) {
+        float m = 1 - Math.abs(f * 2 - 1);
+        return (float) Math.sqrt(Math.max(0, m));
     }
 
     /**
@@ -483,7 +517,7 @@ public final class Cine {
         text(g, Face.MEDIUM, v, w / 2f, h - bars / 2 - Brand.LINE_H * sc / 2, sc, 1, INK, al, false);
     }
 
-    /** 片名：金色大字「赫朝一掷千金游戏」；下面黑边里一行小字接下来是哪一幕。不写介绍词。 */
+    /** 片名：金色大字「赫朝一掷千金游戏」。不写介绍词，也不预告下一幕。 */
     private static void title(GuiGraphics g, int w, int h, float t) {
         float al = span(t, 0.7f, 1.6f), rise = 4 * (1 - out(span(t, 0.7f, 1.9f)));
         float sc = 2.5f, y = h * 0.40f;
@@ -491,7 +525,6 @@ public final class Cine {
             band(g, w, y - D_UP * sc - 26, y + D_DN * sc + 30, al * 0.6f);
             line(g, Face.DISPLAY, w / 2f, y + rise, sc, al, "赫朝一掷千金游戏", GOLD);
         }
-        float a3 = span(t, 2.6f, 3.3f);
-        if (a3 > 0 && !next.isEmpty()) text(g, Face.MEDIUM, spaced(next), w / 2f, h - h * 0.105f + (h * 0.105f - 9) / 2, 0.8f, 1, INK_SOFT, a3, false);
+        // 11-25 审查：片名下面原来预告「第一幕 零点八」，可放完先进的是「游戏目标」，像倒车——片头就收在片名上
     }
 }

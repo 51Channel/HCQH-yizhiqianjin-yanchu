@@ -217,11 +217,15 @@ public final class Cine {
     // ---------- 全员看主持人（插件 Match.focus，主持人物品栏里的「全员看我」右键开关）----------
     // 11-26 用户：「我身为主持人我的物品栏里面有一个按钮开关可以让全员看着我……看的又给我是特写的观感，然后会有运镜，带有一点运镜」
     // 又说：「不需要脸部特写啊……机位向我看，然后并不是脸部特写，我的人特写就可以。我可能在天上飞，所以你观感感受一下」
-    // 拍他整个人（全身占画面四成多）：一开从 6.5 格外 2.4 秒推到 3.2 格；之后绕着他慢慢左右摆（±25 度，18 秒一个来回），远近轻轻呼吸（±0.3 格，12 秒）。
-    // 镜头对着他的胸口、比胸口高 0.4 格微微俯一点。人在哪镜头就在哪（飞起来、冲出去都贴着跟，不会被甩掉），
-    // 只有绕的角度是平滑追上去的、跟身体朝向不跟头（他扭头看人时画面不甩）。镜头和他中间隔着墙 / 方块，就挪到墙这边。
+    // 再说：「切这个运镜的时候啊，视角只有这一个固定这个机位有点不太爽，你再优化一下」——
+    // 一开从 6.5 格外 2.4 秒推进来；之后每 8 秒换一个景别，平滑运过去（不硬切）：正面中景 → 左侧四分之三 → 低机位仰拍 → 右侧高一点的全身 → 侧面近一点 → 回到正面……
+    // 每个景别里还绕着他轻轻摆（±10 度）、远近轻轻呼吸。镜头对着他身体中间（低机位时对着胸口往上看）。人在哪镜头就在哪（飞起来也贴着跟），
+    // 只有角度、远近、高低是平滑追上去的；绕的角度跟身体朝向、不跟头。镜头和他中间隔着方块就挪到这边来。
     private static boolean focusOn; private static String focusId = ""; private static double[] focusCam;
-    private static long focusT0, focusLast; private static double focusYaw, focusDist;
+    private static long focusT0, focusLast; private static double focusYaw, focusDist, focusH;
+    /** 景别：{绕他转多少度（0 = 正对他的脸）, 离多远, 镜头比他身体中间高多少}。 */
+    private static final double[][] FOCUS_FRAMES = {{0, 3.2, 0.4}, {48, 3.6, 0.7}, {-18, 2.5, -0.55}, {-62, 4.6, 1.6}, {80, 2.9, 0.25}};
+    private static final double FOCUS_HOLD = 8;
     private static double[] focusCamera() {
         var mc = Minecraft.getInstance(); if (mc.level == null || focusId.isEmpty()) return null;
         net.minecraft.world.entity.Entity e = null;
@@ -232,20 +236,24 @@ public final class Cine {
         var aim = pos.add(0, e.getBbHeight() * 0.55, 0);
         double body = e instanceof net.minecraft.world.entity.LivingEntity le ? le.yBodyRot : e.getYRot();
         long now = System.nanoTime();
-        if (focusCam == null) { focusT0 = now; focusLast = now; focusYaw = body; focusDist = 6.5; }
+        if (focusCam == null) { focusT0 = now; focusLast = now; focusYaw = body; focusDist = 6.5; focusH = 0.8; }
         double t = (now - focusT0) / 1e9, dt = Math.min(0.1, (now - focusLast) / 1e9); focusLast = now;
         double in = Math.min(1, t / 2.4), ease = in * in * (3 - 2 * in);
-        double wantYaw = body + 25 * Math.sin(t * 2 * Math.PI / 18);
-        double wantDist = 6.5 + (3.2 + 0.3 * Math.sin(t * 2 * Math.PI / 12) - 6.5) * ease;
-        double k = 1 - Math.exp(-dt * 1.6);
+        double[] fr = FOCUS_FRAMES[(int) (t / FOCUS_HOLD) % FOCUS_FRAMES.length];
+        double wantYaw = body + fr[0] + 10 * Math.sin(t * 2 * Math.PI / 11);
+        double wantDist = 6.5 + (fr[1] + 0.2 * Math.sin(t * 2 * Math.PI / 7) - 6.5) * ease;
+        double wantH = fr[2] + 0.06 * Math.sin(t * 2 * Math.PI / 13);
+        double k = 1 - Math.exp(-dt * 0.9);   // 换景别的时候大约 2.5 秒运过去
         focusYaw += net.minecraft.util.Mth.wrapDegrees(wantYaw - focusYaw) * k;
         focusDist = in < 1 ? wantDist : focusDist + (wantDist - focusDist) * k;
+        focusH += (wantH - focusH) * k;
         double yr = Math.toRadians(focusYaw);
-        var want = new net.minecraft.world.phys.Vec3(aim.x - Math.sin(yr) * focusDist, aim.y + 0.4 + 0.08 * Math.sin(t * 2 * Math.PI / 14), aim.z + Math.cos(yr) * focusDist);
+        var look = focusH < 0 ? aim.add(0, 0.25, 0) : aim;   // 低机位：往上看胸口偏上
+        var want = new net.minecraft.world.phys.Vec3(aim.x - Math.sin(yr) * focusDist, aim.y + focusH, aim.z + Math.cos(yr) * focusDist);
         var hit = mc.level.clip(new net.minecraft.world.level.ClipContext(aim, want, net.minecraft.world.level.ClipContext.Block.VISUAL, net.minecraft.world.level.ClipContext.Fluid.NONE, e));
         if (hit.getType() != net.minecraft.world.phys.HitResult.Type.MISS) want = aim.add(hit.getLocation().subtract(aim).scale(0.88));
         focusCam = new double[]{want.x, want.y, want.z};
-        double dx = aim.x - want.x, dy = aim.y - want.y, dz = aim.z - want.z, h = Math.sqrt(dx * dx + dz * dz);
+        double dx = look.x - want.x, dy = look.y - want.y, dz = look.z - want.z, h = Math.sqrt(dx * dx + dz * dz);
         return new double[]{want.x, want.y, want.z, Math.toDegrees(Math.atan2(-dx, dz)), -Math.toDegrees(Math.atan2(dy, h))};
     }
     public static boolean focusing() { return focusOn && !active(); }

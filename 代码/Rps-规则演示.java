@@ -1,5 +1,5 @@
 // 限定猜拳的规则演示（Rps.java 里只抽了 demo() 这一个函数）
-// 原文件 Rps.java 第 555 行起
+// 原文件 Rps.java 第 556 行起
 
     // ================= 规则演示 =================
     /** 一张桌子两头摆两个示范的人：各扣一张牌、翻开（石头赢剪刀），一颗星从输的人胸口飞到赢的人胸口；再抬头看顶上的大屏幕。 */
@@ -38,6 +38,7 @@
         Demos.sfx(m, d, 3.4, "kin", 0.9f, 1f);   // 11-26 外部视听方案第 19 条：站进金线圈，金属「叮」
         Demos.sfx(m, d, 9.6, "draw", 0.8f, 1f); Demos.sfx(m, d, 10.4, "draw", 0.8f, 1.05f);   // 11-26：两边扣牌
         Demos.sfx(m, d, 12.2, "flip", 1f, 1f);
+        Demos.vac(m, d, 11.8, 4.6);   // 11-26 第二版第 19 条：翻牌前 0.4 秒抽空，星飞过去以后回来
         Demos.sfx(m, d, 16.1, "star", 0.9f, 1f);
         d.at(12.2, () -> { if (cardD[0] != null) cardD[0].setItemStack(Match.modelItem("rps0")); if (cardD[1] != null) cardD[1].setItemStack(Match.modelItem("rps1")); });
         d.cap(15, 21, "赢了拿走对方 1 颗星", "每人 3 颗星，输光就出局", false);

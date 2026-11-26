@@ -124,6 +124,7 @@ public final class Cine {
             }
             case "dsync" -> { if (demo && on) { syncT = (float) dbl(o, "t", 0); syncAt = now(); synced = true; } }
             case "stop" -> stop();
+            case "focus" -> { focusOn = b(o, "on"); focusId = s(o, "u", ""); focusCam = null; }
             default -> {}
         }
     }
@@ -211,7 +212,23 @@ public final class Cine {
         return sh;
     }
     private static Shot preOver;
+    // ---------- 全员看主持人（插件 Match.focus）：镜头放在他脸前面 2.4 格、稍微高一点，回头对着他的脸，跟着他走（每帧往目标挪一截，不硬跟） ----------
+    private static boolean focusOn; private static String focusId = ""; private static double[] focusCam;
+    private static double[] focusCamera() {
+        var mc = Minecraft.getInstance(); if (mc.level == null || focusId.isEmpty()) return null;
+        net.minecraft.world.entity.Entity e = null;
+        for (net.minecraft.world.entity.Entity x : mc.level.entitiesForRendering()) if (x.getStringUUID().equals(focusId)) { e = x; break; }
+        if (e == null) { focusCam = null; return null; }   // 离得太远没同步过来：回自己的画面
+        float pt = mc.getDeltaTracker().getGameTimeDeltaPartialTick(true);
+        var eye = e.getEyePosition(pt); double yaw = Math.toRadians(e instanceof net.minecraft.world.entity.LivingEntity le ? le.yHeadRot : e.getYRot());
+        double[] want = {eye.x - Math.sin(yaw) * 2.4, eye.y + 0.25, eye.z + Math.cos(yaw) * 2.4};
+        if (focusCam == null) focusCam = want; else for (int i = 0; i < 3; i++) focusCam[i] += (want[i] - focusCam[i]) * 0.08;
+        double dx = eye.x - focusCam[0], dy = eye.y - focusCam[1], dz = eye.z - focusCam[2], h = Math.sqrt(dx * dx + dz * dz);
+        return new double[]{focusCam[0], focusCam[1], focusCam[2], Math.toDegrees(Math.atan2(-dx, dz)), -Math.toDegrees(Math.atan2(dy, h))};
+    }
+    public static boolean focusing() { return focusOn && !active(); }
     public static double[] camera() {
+        if (focusing()) return focusCamera();
         if (!active()) return null;
         float t = t(); Shot sh = shotAt(t);
         if (sh.self) return null;   // 自己的第一人称：不接管

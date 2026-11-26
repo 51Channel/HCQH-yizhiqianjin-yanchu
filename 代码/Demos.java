@@ -463,7 +463,7 @@ final class Demos {
 
     static Demo ecard(Match m) {
         Demo d = new Demo(Match.cn(4), Match.D_NAMES[0]);
-        int games = Rules.ecardGames(m.fast), per = Rules.ecardPer(m.fast);   // 11-23：6 局、每 3 局换边（快节奏 4 局、每 2 局）
+        int games = Rules.ecardGames(m.fast), per = Rules.ecardPer(m.fast);   // 11-26：12 局、每 3 局换边（快节奏 8 局、每 2 局）；追不上提前结束
         d.shot(0, 3, v(C + 6, 72, C + 5), v(C + 4.4, 69.4, C + 3.6), v(C, 65.9, C), v(C, 65.9, C), 55, true);
         d.gist(3, 6, "皇帝赢市民，市民赢奴隶：奴隶赢皇帝", "和主持人打 " + games + " 局，赢了通关拿大奖，输了活板翻开", v(C + 4.4, 69.4, C + 3.6), v(C + 3.9, 69, C + 3.2), v(C, 65.9, C), 55);
         double[] near = v(C + 2.3, 68.3, C + 2.5), table = v(C, 65.9, C + 0.1);

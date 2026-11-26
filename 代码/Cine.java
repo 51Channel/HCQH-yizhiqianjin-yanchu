@@ -118,6 +118,7 @@ public final class Cine {
                 for (JsonObject s : arr(o, "caps")) DCAPS.add(new Cap((float) dbl(s, "a", 0), (float) dbl(s, "b", 1), b(s, "x") ? 0 : ++n, s(s, "m", ""), s(s, "s", ""), b(s, "r"), b(s, "g"), b(s, "h")));
                 dKick = s(o, "kick", ""); dTitle = s(o, "title", ""); dWord = s(o, "word", "游戏规则"); dPre = (float) dbl(o, "pre", 0);
                 demoLen = i(o, "len", 600) / 20f; scale = 1; demo = true;
+                preOver = new Shot(0, Math.max(1f, dPre), v(C, 101, C - 52), v(C, 96, C - 44), v(C, 72, C), v(C, 72, C + 2), 60, true);   // 片名卡底下的俯瞰（和片头片名同一处）
                 startAt = now(); endAt = 0; on = !DSHOTS.isEmpty(); hold = false; bankDone = BANK_T.length; stopMusic(); synced = false; lastT = 0;
                 for (Shot s : DSHOTS) FilmsetRenderer.prewarm(s.p0[0], s.p0[2]);
             }
@@ -145,23 +146,32 @@ public final class Cine {
      * 每个镜头切过去一声风、字出来一下重击，主持人那一下压低，片名前先往上推、片名出来「轰」一声，收尾一击。
      * 没放配乐（bgm/op.ogg）时底下垫一层低沉的环境声。时间是正常节奏的秒（快节奏 t() 已经缩好）。
      */
-    private static final List<float[]> OP_CUES = new ArrayList<>();
-    private static final List<String> OP_CUE_N = new ArrayList<>();
+    /** always：有配乐也放（11-26 外部视听方案：黑屏砍掉以后，切点靠声音做气口）；否则只在没配乐时放。 */
+    private record OpCue(float t, String n, float vol, float pitch, boolean always) {}
+    private static final List<OpCue> OP_CUES = new ArrayList<>();
     private static int opCue;
-    private static void cue(float t, String n, float vol, float pitch) { OP_CUES.add(new float[]{t, vol, pitch}); OP_CUE_N.add(n); }
+    private static void cue(float t, String n, float vol, float pitch) { OP_CUES.add(new OpCue(t, n, vol, pitch, false)); }
+    private static void always(float t, String n, float vol, float pitch) { OP_CUES.add(new OpCue(t, n, vol, pitch, true)); }
     static {
         cue(0.5f, "subdrop", 0.9f, 1f); cue(2.0f, "hit", 0.8f, 1f);
-        for (int k = 0; k < 6; k++) { float c = T_MONT + k * MONT; cue(c, "whoosh", 0.35f, 1f); cue(c + 0.3f, "hit", 0.5f, 1.1f); }
-        cue(T_LINE, "whoosh", 0.4f, 1f); cue(T_LINE + 0.6f, "hit", 0.65f, 1f);
+        for (int k = 0; k < 6; k++) { float c = T_MONT + k * MONT; cue(c + 0.3f, "hit", 0.5f, 1.1f); }
+        cue(T_LINE + 0.6f, "hit", 0.65f, 1f);
         cue(T_HOST, "whoosh", 0.4f, 0.9f); cue(T_HOST + 0.5f, "hit", 0.8f, 0.8f); cue(T_DARE, "whoosh", 0.35f, 0.8f); cue(T_DARE + 0.4f, "hit", 0.9f, 0.7f);
         cue(T_TITLE - 1.1f, "swell", 0.9f, 1f); cue(T_TITLE + 0.7f, "braam", 1f, 1f);
         cue(T_BLACK, "hit", 0.6f, 0.9f);
+        // 11-26 外部方案（第 1、3、4 条）：黑场两行字各一声很轻的低频重音；六幕快切每刀前 0.15 秒先进一声短风（声音先到、画面后切）；
+        // 选手入场一声低沉冲击；片名落定一声低频重击。音量按方案的分贝换算（-10 dB≈0.32、-9≈0.35、-7≈0.45、-5≈0.56）
+        always(0.5f, "impact", 0.32f, 0.85f); always(2.0f, "impact", 0.32f, 0.85f);
+        for (int k = 0; k < 6; k++) always(T_MONT + k * MONT - 0.15f, "whoosh", 0.35f, 1.05f);
+        always(T_LINE - 0.05f, "impact", 0.45f, 0.9f);
+        always(T_TITLE + 0.7f, "hit", 0.56f, 0.7f);
+        OP_CUES.sort(java.util.Comparator.comparingDouble(OpCue::t));
     }
     private static void opSounds(float t) {
-        if (opBgm) return;   // 11-23：「音效不是说你加满它就是好的」——有配乐就只听配乐（亮灯那一下一下的「咔」照旧，在 bank 里）
-        while (opCue < OP_CUES.size() && t >= OP_CUES.get(opCue)[0]) {
-            float[] c = OP_CUES.get(opCue); String n = OP_CUE_N.get(opCue++);
-            if (t - c[0] < 0.5f) ZdFx.play(n, c[2], c[1]);   // 卡了一下跳过去的不补放
+        // 11-23：「音效不是说你加满它就是好的」——有配乐时只放 always 那几下（亮灯那一下一下的「咔」照旧，在 bank 里）
+        while (opCue < OP_CUES.size() && t >= OP_CUES.get(opCue).t()) {
+            OpCue c = OP_CUES.get(opCue++);
+            if ((c.always() || !opBgm) && t - c.t() < 0.5f) ZdFx.play(c.n(), c.pitch(), c.vol());   // 卡了一下跳过去的不补放
         }
         if (!opBgm) { int k = (int) (t / 14f); if (k >= opBed && t < T_BLACK) { opBed = k + 1; ZdFx.play("drone", 1f, 0.8f); } }
     }
@@ -189,11 +199,21 @@ public final class Cine {
 
     // ================= 镜头（CameraMixin 在 Camera.setup 之后问这里） =================
     /** 现在的机位：{x, y, z, yaw, pitch}；不在片头里返回 null。 */
+    /**
+     * 这会儿用哪个镜头。11-26 外部视听方案第 6、9 条：片名卡不再铺全黑，压暗的当幕场景上浮字——
+     * 片名卡那几秒还没到第一镜，就停在第一镜的起点（fov 往里收一点，像慢慢推进去）；第一镜是自己的第一人称（游戏目标）的，先拍北边高处俯瞰漏斗场。
+     */
+    private static Shot shotAt(float t) {
+        List<Shot> list = demo ? DSHOTS : SHOTS;
+        Shot sh = list.get(0);
+        for (Shot s : list) if (t >= s.t0) sh = s;
+        if (demo && sh.self && t < sh.t0 && preOver != null) return preOver;
+        return sh;
+    }
+    private static Shot preOver;
     public static double[] camera() {
         if (!active()) return null;
-        List<Shot> list = demo ? DSHOTS : SHOTS;
-        float t = t(); Shot sh = list.get(0);
-        for (Shot s : list) if (t >= s.t0) sh = s;
+        float t = t(); Shot sh = shotAt(t);
         if (sh.self) return null;   // 自己的第一人称：不接管
         float k = Math.max(0, Math.min(1, (t - sh.t0) / (sh.t1 - sh.t0)));
         if (sh.ease) k = (float) (0.5 - 0.5 * Math.cos(Math.PI * k));
@@ -206,16 +226,14 @@ public final class Cine {
     public static float fov() {
         List<Shot> list = demo ? DSHOTS : SHOTS;
         if (list.isEmpty()) return 70;
-        Shot sh = list.get(0); float t = t();
-        for (Shot s : list) if (t >= s.t0) sh = s;
+        float t = t(); Shot sh = shotAt(t);
+        if (demo && t < sh.t0) return sh.fov + 7 * (1 - ease(span(t, 0, sh.t0)));   // 片名卡那几秒：视野慢慢收，像往里推
         return sh.fov;
     }
     /** 规则演示这会儿是不是切回了自己的第一人称（插件 Demo.self）：镜头、视野、手、物品栏都照常。 */
     public static boolean selfView() {
         if (!active() || !demo || DSHOTS.isEmpty()) return false;
-        float t = t(); Shot sh = DSHOTS.get(0);
-        for (Shot s : DSHOTS) if (t >= s.t0) sh = s;
-        return sh.self;
+        return shotAt(t()).self;
     }
     private static double[] lerp(double[] a, double[] b, float k) { return v(a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k); }
 
@@ -262,9 +280,9 @@ public final class Cine {
         int w = g.guiWidth(), h = g.guiHeight();
         if (!active()) {   // 刚放完：从黑里淡回自己的第一人称
             if (opBed > 0) { stopBed(); opBed = 0; }   // 片头的底噪跟着片头一起停
-            if (hold && now() - holdAt > 3000) { hold = false; endAt = now(); }   // 服务器一直没说停：别永远黑着
+            if (hold && now() - holdAt > 1000) { hold = false; endAt = now(); }   // 服务器一直没说停：别永远黑着（11-26 外部方案第 5 条：停黑最多 1 秒）
             if (hold) { rect(g, 0, 0, w, h, solid(0x000000)); return; }
-            float k = endAt == 0 ? 0 : 1 - (now() - endAt) / 450f;
+            float k = endAt == 0 ? 0 : 1 - (now() - endAt) / 350f;   // 11-26 第 10 条：0.35 秒亮回第一人称
             if (k > 0) rect(g, 0, 0, w, h, a(0x000000, k));
             return;
         }
@@ -275,7 +293,7 @@ public final class Cine {
         if (demo) { demoText(g, w, h, bars, t); return; }
         opSounds(t);
         float dk = opDip(t); if (dk > 0) rect(g, 0, 0, w, h, a(0x000000, dk));   // 换镜头的气口（字画在它上面）
-        if (t < T_LIGHT + 1.2f) hook(g, w, h, t);
+        if (t < T_LIGHT + 0.7f) hook(g, w, h, t);
         else if (t >= T_MONT && t < T_LINE) {
             int k = Math.min(5, (int) ((t - T_MONT) / MONT));
             if (k < acts.size()) { String[] a = acts.get(k); caption(g, w, h, bars, t - (T_MONT + k * MONT), MONT, a[0], a[1], GOLD); }
@@ -292,15 +310,19 @@ public final class Cine {
      * 11-25 用户：「你这个全黑屏，第一幕什么，第二幕什么，然后缝突然就切到那个你连一个气口都没有」——
      * 每次换镜头都先压黑、在黑里切、再亮起来；六幕快切完到「选手入场」之间多停一拍黑。时间点对着配乐，一个都不挪，只在切点两边借几分之一秒。
      */
+    /*
+     * 11-26 用户：「用了太多的黑屏淡出转场、淡入转场啊，整个眼睛的观感会变得特别累」，外部视听方案第 3、4 条：
+     * 六幕快切踩配乐重拍硬切，只在切点后留 0.08 秒暗帧（跨三百格跳去列车，防一帧没装好）；气口交给切点前 0.15 秒的风声（opSounds）。
+     * 选手入场 0.25 秒压暗一下（不压全黑）；主持人、正脸、片名同一个场子，直接硬切。
+     */
     private static float opDip(float t) {
         float k = 0;
-        for (int i = 0; i <= 5; i++) k = Math.max(k, dip(t, T_MONT + i * MONT, 0.3f, 0, 0.35f));
-        k = Math.max(k, dip(t, T_LINE, 0.6f, 0.35f, 0.7f));
-        k = Math.max(k, dip(t, T_HOST, 0.3f, 0.1f, 0.4f));
-        k = Math.max(k, dip(t, T_DARE, 0.3f, 0.1f, 0.4f));
-        k = Math.max(k, dip(t, T_TITLE, 0.35f, 0.1f, 0.5f));
+        for (int i = 0; i <= 5; i++) k = Math.max(k, flash(t, T_MONT + i * MONT, 0.08f));
+        k = Math.max(k, 0.7f * dip(t, T_LINE, 0.12f, 0, 0.13f));
         return k;
     }
+    /** 切点 c 那一刻全黑，len 秒内亮回来（硬切后面的一个暗帧）。 */
+    private static float flash(float t, float c, float len) { return t < c || t > c + len ? 0 : 1 - (t - c) / len; }
     /** 切点 c 前 out 秒压黑，全黑停 hold 秒，再用 in 秒亮回来（两头缓）。 */
     private static float dip(float t, float c, float out, float hold, float in) {
         if (t < c - out || t > c + hold + in) return 0;
@@ -314,7 +336,7 @@ public final class Cine {
 
     /** 黑场两行：「30 个人进场」「只有 1 个能通关」，1 是红的。 */
     private static void hook(GuiGraphics g, int w, int h, float t) {
-        float black = 1 - span(t, T_LIGHT, T_LIGHT + 1.2f);
+        float black = 1 - span(t, T_LIGHT, T_LIGHT + 0.7f);   // 11-26 外部方案第 1 条：亮起从 1.2 秒压到 0.7 秒
         rect(g, 0, 0, w, h, a(0x000000, black));
         float fade = 1 - span(t, 4.4f, 5.2f), a1 = span(t, 0.5f, 1.2f) * fade, a2 = span(t, 2.0f, 2.7f) * fade;
         float sc = 2.3f, y = h / 2f - 30;
@@ -340,10 +362,10 @@ public final class Cine {
     /**
      * 规则演示的画面（11-23 重做：「虽然是一句话讲完，但是演出方式还是太没意思了。有没有更厉害的演出啊？……这个演出要有那种电影感」）：
      * <ol>
-     *   <li>黑场片名卡（0 – pre 秒）：先亮一行小字「第几幕」，底下一口气越吸越紧（插件放 swell），片名在第 2 秒收拢落定（插件放 braam），切进场景前 1 秒字淡掉、停 0.6 秒全黑，场景再用 1 秒从黑里亮起来（11-25 气口）。</li>
+     *   <li>片名卡（0 – pre 秒）：11-26 起不铺全黑——当幕场景压暗 65%、视野慢慢收（游戏目标先拍北边高处俯瞰），一行小字「第几幕」，底下一口气越吸越紧（插件放 swell），片名在第 2 秒收拢落定（插件放 braam），切进第一镜前 1 秒字淡掉、场景同时提亮。</li>
      *   <li>一句话讲完（gist）：画面正中两行大字，冒号前后各一行，一行一行落下来（插件每行放一下 hit），数字金色、「掉 / 受伤 / 出局」这种红色；小字最后出来。</li>
      *   <li>一步一步：像电影字幕，底下居中一行，不写 1 2 3 步数；「输了会怎样」那一步镜头往里一冲、一震，四边压一圈暗红（插件放 subdrop）。</li>
-     *   <li>一直有：宽银幕黑边、四角压暗、一层很淡的胶片颗粒；最后 0.8 秒淡黑（11-25 原来是硬切黑，「连一个气口都没有」），回到自己的第一人称。</li>
+     *   <li>一直有：宽银幕黑边、四角压暗、一层很淡的胶片颗粒；最后 0.4 秒压暗（11-26 原来 0.8 秒），黑着等服务器最多 1 秒，再 0.35 秒亮回自己的第一人称。</li>
      * </ol>
      */
     private static void demoText(GuiGraphics g, int w, int h, float bars, float t) {
@@ -351,16 +373,16 @@ public final class Cine {
         if (t < dPre) { titleCard(g, w, h, t); return; }
         boolean self = selfView();
         if (self) selfMarks(g, w, h, t); else film(g, w, h, t);   // 自己的第一人称：不加胶片暗角颗粒，像平时玩的时候一样；心和红圈画在这里
-        float up = 1 - ease(span(t, dPre, dPre + 1.0f)); if (up > 0) rect(g, 0, 0, w, h, a(0x000000, up));   // 11-25 气口：片名卡停一拍黑之后，场景从黑里慢慢亮起来（字画在它上面）
         if (!self) text(g, Face.MEDIUM, spaced(dTitle + " · " + dWord), w / 2f, (bars - 8) / 2, 0.7f, 1, INK_QUIET, span(t, dPre + 0.3f, dPre + 0.9f), false);
         Cap newest = null;   // 同一时刻只画最新开始的那一句
         for (Cap c : DCAPS) if (t >= c.t0 && (newest == null || c.t0 >= newest.t0)) newest = c;
         for (Cap c : DCAPS) if (c.red && t >= c.t0 && t < c.t0 + 1.4f) redPulse(g, w, h, 1 - (t - c.t0) / 1.4f);
         if (newest != null && t <= newest.t1 + 0.4f) { if (self) selfCap(g, w, h, t, newest); else if (newest.gist) tagline(g, w, h, t, newest); else subtitle(g, w, h, bars, t, newest); }
-        float sk = 0;   // 进出自己的第一人称：先压黑、在黑里换、再亮起来（和片头换镜头一样的气口）
-        for (int i = 1; i < DSHOTS.size(); i++) if (DSHOTS.get(i).self != DSHOTS.get(i - 1).self) sk = Math.max(sk, dip(t, DSHOTS.get(i).t0, 0.35f, 0.15f, 0.5f));
+        // 进出自己的第一人称：11-26 外部方案第 7 条，原来前后各压黑 1 秒，改成切点两边一共 0.2 秒的快暗（只为盖住换镜头那一帧）
+        float sk = 0;
+        for (int i = 0; i < DSHOTS.size(); i++) if (i == 0 ? DSHOTS.get(0).self : DSHOTS.get(i).self != DSHOTS.get(i - 1).self) sk = Math.max(sk, dip(t, DSHOTS.get(i).t0, 0.05f, 0.03f, 0.12f));
         if (sk > 0) rect(g, 0, 0, w, h, a(0x000000, sk));
-        float end = ease(span(t, L - 0.9f, L - 0.1f)); if (end > 0) rect(g, 0, 0, w, h, a(0x000000, end));   // 11-25 结尾不再硬切黑，0.8 秒淡下去
+        float end = ease(span(t, L - 0.5f, L - 0.1f)); if (end > 0) rect(g, 0, 0, w, h, a(0x000000, end));   // 11-26 第 8 条：结尾 0.4 秒压暗（原来 0.8 秒）
     }
     // ================= 自己的第一人称：红圈、红箭头圈住物品栏上的心 =================
     /**
@@ -453,8 +475,13 @@ public final class Cine {
      * 片名的字先散得很开、淡淡地出来，一口气往中间收拢落定（电影片头那种字距收拢），最后小字「怎么玩」。不闪、不抖、不放大。
      */
     private static void titleCard(GuiGraphics g, int w, int h, float t) {
-        rect(g, 0, 0, w, h, solid(0x000000));
+        // 11-26 外部方案第 6、9 条：不再铺 4.4 秒全黑。开头 0.3 秒还是黑的（接上一段的黑、盖住传送），然后压暗 65% 的当幕场景浮出来，
+        // 字浮在上面；字淡掉的同时场景提亮，切进第一镜时已经是正常亮度
+        film(g, w, h, t);
+        float dark = (t < 0.3f ? 1 : 0.65f + 0.35f * (1 - ease(span(t, 0.3f, 1.1f)))) * (1 - ease(span(t, dPre - CARD_OUT, dPre - 0.2f)));
+        if (dark > 0) rect(g, 0, 0, w, h, a(0x000000, dark));
         float slam = SLAM_AT, fo = 1 - span(t, dPre - CARD_OUT, dPre - CARD_BLACK), cy = h * 0.46f, sc = 3.3f;
+        band(g, w, cy - 70, cy + 60, 0.45f * fo * span(t, 0.3f, 1.1f));
         float ka = span(t, 0.3f, 0.9f) * fo;
         text(g, Face.MEDIUM, spaced(dKick), w / 2f, cy - 46, 0.9f, 1, GOLD, ka, false);
         float in = t - (slam - 0.5f); if (in < 0) return;   // 比原来砸下来的时刻早半拍开始收，收拢落定正好在原来那一下

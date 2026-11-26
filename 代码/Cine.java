@@ -212,19 +212,39 @@ public final class Cine {
         return sh;
     }
     private static Shot preOver;
-    // ---------- 全员看主持人（插件 Match.focus）：镜头放在他脸前面 2.4 格、稍微高一点，回头对着他的脸，跟着他走（每帧往目标挪一截，不硬跟） ----------
+    // ---------- 全员看主持人（插件 Match.focus，主持人物品栏里的「全员看我」右键开关）----------
+    // 11-26 用户：「我身为主持人我的物品栏里面有一个按钮开关可以让全员看着我……看的又给我是特写的观感，然后会有运镜，带有一点运镜」
+    // 又说：「不需要脸部特写啊……机位向我看，然后并不是脸部特写，我的人特写就可以。我可能在天上飞，所以你观感感受一下」
+    // 拍他整个人（全身占画面四成多）：一开从 6.5 格外 2.4 秒推到 3.2 格；之后绕着他慢慢左右摆（±25 度，18 秒一个来回），远近轻轻呼吸（±0.3 格，12 秒）。
+    // 镜头对着他的胸口、比胸口高 0.4 格微微俯一点。人在哪镜头就在哪（飞起来、冲出去都贴着跟，不会被甩掉），
+    // 只有绕的角度是平滑追上去的、跟身体朝向不跟头（他扭头看人时画面不甩）。镜头和他中间隔着墙 / 方块，就挪到墙这边。
     private static boolean focusOn; private static String focusId = ""; private static double[] focusCam;
+    private static long focusT0, focusLast; private static double focusYaw, focusDist;
     private static double[] focusCamera() {
         var mc = Minecraft.getInstance(); if (mc.level == null || focusId.isEmpty()) return null;
         net.minecraft.world.entity.Entity e = null;
         for (net.minecraft.world.entity.Entity x : mc.level.entitiesForRendering()) if (x.getStringUUID().equals(focusId)) { e = x; break; }
         if (e == null) { focusCam = null; return null; }   // 离得太远没同步过来：回自己的画面
         float pt = mc.getDeltaTracker().getGameTimeDeltaPartialTick(true);
-        var eye = e.getEyePosition(pt); double yaw = Math.toRadians(e instanceof net.minecraft.world.entity.LivingEntity le ? le.yHeadRot : e.getYRot());
-        double[] want = {eye.x - Math.sin(yaw) * 2.4, eye.y + 0.25, eye.z + Math.cos(yaw) * 2.4};
-        if (focusCam == null) focusCam = want; else for (int i = 0; i < 3; i++) focusCam[i] += (want[i] - focusCam[i]) * 0.08;
-        double dx = eye.x - focusCam[0], dy = eye.y - focusCam[1], dz = eye.z - focusCam[2], h = Math.sqrt(dx * dx + dz * dz);
-        return new double[]{focusCam[0], focusCam[1], focusCam[2], Math.toDegrees(Math.atan2(-dx, dz)), -Math.toDegrees(Math.atan2(dy, h))};
+        var pos = e.getPosition(pt);
+        var aim = pos.add(0, e.getBbHeight() * 0.55, 0);
+        double body = e instanceof net.minecraft.world.entity.LivingEntity le ? le.yBodyRot : e.getYRot();
+        long now = System.nanoTime();
+        if (focusCam == null) { focusT0 = now; focusLast = now; focusYaw = body; focusDist = 6.5; }
+        double t = (now - focusT0) / 1e9, dt = Math.min(0.1, (now - focusLast) / 1e9); focusLast = now;
+        double in = Math.min(1, t / 2.4), ease = in * in * (3 - 2 * in);
+        double wantYaw = body + 25 * Math.sin(t * 2 * Math.PI / 18);
+        double wantDist = 6.5 + (3.2 + 0.3 * Math.sin(t * 2 * Math.PI / 12) - 6.5) * ease;
+        double k = 1 - Math.exp(-dt * 1.6);
+        focusYaw += net.minecraft.util.Mth.wrapDegrees(wantYaw - focusYaw) * k;
+        focusDist = in < 1 ? wantDist : focusDist + (wantDist - focusDist) * k;
+        double yr = Math.toRadians(focusYaw);
+        var want = new net.minecraft.world.phys.Vec3(aim.x - Math.sin(yr) * focusDist, aim.y + 0.4 + 0.08 * Math.sin(t * 2 * Math.PI / 14), aim.z + Math.cos(yr) * focusDist);
+        var hit = mc.level.clip(new net.minecraft.world.level.ClipContext(aim, want, net.minecraft.world.level.ClipContext.Block.VISUAL, net.minecraft.world.level.ClipContext.Fluid.NONE, e));
+        if (hit.getType() != net.minecraft.world.phys.HitResult.Type.MISS) want = aim.add(hit.getLocation().subtract(aim).scale(0.88));
+        focusCam = new double[]{want.x, want.y, want.z};
+        double dx = aim.x - want.x, dy = aim.y - want.y, dz = aim.z - want.z, h = Math.sqrt(dx * dx + dz * dz);
+        return new double[]{want.x, want.y, want.z, Math.toDegrees(Math.atan2(-dx, dz)), -Math.toDegrees(Math.atan2(dy, h))};
     }
     public static boolean focusing() { return focusOn && !active(); }
     public static double[] camera() {

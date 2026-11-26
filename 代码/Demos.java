@@ -468,7 +468,7 @@ final class Demos {
         d.gist(3, 6, "皇帝赢市民，市民赢奴隶：奴隶赢皇帝", "和主持人打 " + games + " 局，赢了通关拿大奖，输了活板翻开", v(C + 4.4, 69.4, C + 3.6), v(C + 3.9, 69, C + 3.2), v(C, 65.9, C), 55);
         double[] near = v(C + 2.3, 68.3, C + 2.5), table = v(C, 65.9, C + 0.1);
         d.cap(3, 9, "一边拿皇帝，一边拿奴隶", "另外各 4 张市民", false);
-        d.shot(3, 27, near, v(C + 2.0, 68.4, C + 2.7), table, table, 52, true);
+        d.shot(3, 31, near, v(C + 2.0, 68.4, C + 2.7), table, table, 52, true);
         d.at(3.3, () -> { m.hostEmp = true; m.ecSides(); m.ecDeal(); });
         // 11-26 外部视听方案第 20 条：三张牌一张一张落下（和模组 Cine.ecardGist 对齐：3.25 / 3.6 / 3.95 秒），红线绕回皇帝那一下拔刀声；发牌声
         for (int i = 0; i < 3; i++) sfx(m, d, 3.25 + 0.35 * i, "draw", 0.9f, 0.95f - 0.05f * i);
@@ -481,26 +481,32 @@ final class Demos {
         d.at(15.4, () -> { m.ecFlip(true); m.ecFlip(false); });
         sfx(m, d, 15.4, "flip", 1f, 1f);   // 11-26：实录翻牌
         d.at(18.2, () -> { m.ecDiscard(true); m.ecDiscard(false); });
-        d.cap(21, 27, "奴隶碰上皇帝，奴隶赢", "每 " + per + " 局换边 · 奴隶赢 3 分，皇帝赢 1 分", false);
+        d.cap(21, 27, "奴隶碰上皇帝，奴隶赢", "拿奴隶赢一局 3 分，拿皇帝赢一局 1 分", false);
         d.at(21.2, () -> { m.hostEmp = false; m.ecSides(); m.ecDeal(); });
         sfx(m, d, 21.2, "deal", 0.8f, 1f); sfx(m, d, 22.3, "draw", 0.8f, 1f); sfx(m, d, 22.6, "draw", 0.8f, 1.05f);
         d.at(22.3, () -> { m.ecPut(true, 1); m.ecPut(false, 1); });
         d.at(24.4, () -> { m.ecFlip(true); m.ecFlip(false); });
         sfx(m, d, 24.4, "flip", 1f, 1f); sfx(m, d, 24.45, "impact", 0.8f, 1f);   // 11-26 第 20 条：奴隶赢皇帝，翻牌叠一声重低音
+        // 11-26 用户：「原作是这个样子的话，那可以把这个游戏的讲解阶段这个规则进行一个更新」——照原作讲换边：你先拿皇帝，每几局换一次，最后一段轮到你拿奴隶。
+        // 桌上先摆成你拿皇帝（主持人奴隶），两秒后换过来（主持人皇帝、你奴隶）
+        d.cap(27, 31, "你先拿皇帝，每 " + per + " 局换边", "最后 " + per + " 局，轮到你拿奴隶", false);
+        d.at(27.2, () -> { m.hostEmp = false; m.ecSides(); m.ecDeal(); });
+        d.at(29.2, () -> { m.hostEmp = true; m.ecSides(); m.ecDeal(); });
+        sfx(m, d, 27.2, "deal", 0.8f, 1f); sfx(m, d, 29.2, "deal", 0.8f, 1.05f);
         // 挑战席上坐一个示范的人（真的挑战者演完才上桌）：最后一步他连人带活板翻下去
         Location seat = Venue.plate4(m.world);
         Who[] ch = new Who[1];
         d.at(0.1 - d.off, () -> { Mannequin e = m.demoActor(d, seat, 4); ch[0] = new Who("示范", null, e); m.seat(ch[0], seat); });   // 一开场就坐着（不受开头那句挪时间影响）
         // 11-25「打满什么什么翻开，太大白话了，要告诉大家会发生什么，要么你赢，要么你输」→ 拆成两屏：先讲赢，再演输
-        d.cap(27, 30, games + " 局打完，总分赢过主持人", "你通关，赢走神秘大奖", false);
-        d.cap(30, 35, "总分输了，脚下的活板翻开", "平分就加赛一局，一定分出输赢", true);
-        d.still(27, 35.5, v(C + 4.6, seat.getY() + 2.6, C + 3.6), v(C, seat.getY() - 0.6, C + 0.6), 62);
-        d.at(31.2, () -> {
+        d.cap(31, 34, games + " 局打完，总分赢过主持人", "你通关，赢走神秘大奖", false);
+        d.cap(34, 39, "总分输了，脚下的活板翻开", "平分就加赛一局，一定分出输赢", true);
+        d.still(31, 39.5, v(C + 4.6, seat.getY() + 2.6, C + 3.6), v(C, seat.getY() - 0.6, C + 0.6), 62);
+        d.at(35.2, () -> {
             m.scene.dt(10); m.scene.set("plate4.sw", -900);
             if (ch[0] != null && ch[0].chair != null) m.slide(ch[0], ch[0].chair.getLocation().clone().add(0, -6, 0), 14);
         });
-        sfx(m, d, 31.2, "trap", 1f, 1f); sfx(m, d, 31.5, "swish", 0.8f, 0.9f);   // 11-26 第 20 条：活板翻开轰一声，接一道往下掉的风
-        d.at(33.6, () -> { if (ch[0] != null) { m.unseat(ch[0]); Entity e = ch[0].body(); if (e != null) e.remove(); } m.scene.dt(20); m.scene.set("plate4.sw", 0); });
+        sfx(m, d, 35.2, "trap", 1f, 1f); sfx(m, d, 35.5, "swish", 0.8f, 0.9f);   // 11-26 第 20 条：活板翻开轰一声，接一道往下掉的风
+        d.at(37.6, () -> { if (ch[0] != null) { m.unseat(ch[0]); Entity e = ch[0].body(); if (e != null) e.remove(); } m.scene.dt(20); m.scene.set("plate4.sw", 0); });
         d.cleanup.add(() -> { if (ch[0] != null) m.unseat(ch[0]); m.scene.dt(20); m.scene.set("plate4.sw", 0); });
         return d;
     }

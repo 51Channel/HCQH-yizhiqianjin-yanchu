@@ -72,11 +72,26 @@ final class Demos {
         d.gist(o, 6, "选一个 0 到 100 的数：全场平均乘 0.8 是目标", "离目标最远的人，脚下翻板，掉进水里", ring(13, 75, 87.5), ring(12, 70, 88), ring(39, 255, 76), 50);
         // ① 大白话：有哪些数、怎么算目标、谁站得住
         d.cap(o + 0, o + 5.8, "0 到 100，匿名选数", "用投票器选好，没人看得见", false);
-        d.shot(o + 0, o + 6, ring(31, 214, 80.6), ring(31, 236, 80.4), ring(40, 232, 76.3), ring(40, 256, 76.3), 52, true);
+        // 11-26 用户：「选数字的那个介绍……要切回第一人称，把那个选数字的那个画面抬起来给观众看，大家才知道是个什么玩意儿」：
+        // 切回每个人自己的第一人称，手里一台投票器举到眼前，屏幕上从 50 拨到 80、按下去（只是演示：这张票服务器不收）
+        d.self(o + 0, o + 6);
+        lend(m, d, o - 0.6, o + 6, java.util.Map.of(0, m.prop("device", "投票器 · 滚轮拨，右键按", 1, "demo:-1")), 0);
+        d.at(o - 0.5, () -> {
+            com.google.gson.JsonObject b = new com.google.gson.JsonObject();
+            b.addProperty("k", "ballot"); b.addProperty("id", "demo"); b.addProperty("head", Match.A_NAMES[0]); b.addProperty("q", "选一个 0 到 100 的数");
+            b.addProperty("hint", ""); b.addProperty("ctx", ""); b.addProperty("kind", "num"); b.addProperty("min", 0); b.addProperty("max", 100);
+            b.addProperty("left", 20 * 30); b.addProperty("open", false); b.addProperty("prop", "");
+            m.fx.all(b);
+        });
+        int[] dial = {51, 53, 55, 58, 61, 64, 67, 70, 72, 74, 76, 78, 79, 80};
+        for (int i = 0; i < dial.length; i++) { final int v = dial[i]; d.at(o + 1.2 + i * 0.13, () -> { for (org.bukkit.entity.Player pl : m.world.getPlayers()) m.devCmd(pl, "dial", v); }); }
+        d.at(o + 3.6, () -> { for (org.bukkit.entity.Player pl : m.world.getPlayers()) m.devCmd(pl, "press", 0); });
+        Runnable end = () -> { com.google.gson.JsonObject b = new com.google.gson.JsonObject(); b.addProperty("k", "ballot_end"); b.addProperty("id", "demo"); m.fx.all(b); };
+        d.at(o + 6, end); d.cleanup.add(end);
         d.cap(o + 6, o + 11.8, "时间到，指针转到目标上", "", false);   // 公式开头说过了，这里只看指针
         d.shot(o + 6, o + 12, ring(4, 180, 92), ring(9, 0, 89), ring(39, Venue.thV(50), 76), ring(39, Venue.thV(50), 76), 60, true);
         d.at(o + 6.4, () -> { m.scene.dt(80); m.scene.needle(50); });
-        sfx(m, d, o + 2.0, "dial", 0.9f, 1f); sfx(m, d, o + 2.35, "dial", 0.9f, 1.08f);   // 11-26 外部视听方案第 11 条：匿名选数，拨盘咔哒两下
+        // 拨盘的咔哒声：模组里投票器每拨一格自己响（上面那段第一人称里拨到 80）
         sfx(m, d, o + 10.4, "lock", 1f, 1f);   // 11-26 第 11 条：指针停住，原来的 reveal 换成清脆的锁定声
         // ② 例一：四个人选 100，一个人选 80 → 平均 96 × 0.8 = 76.8，目标 77
         Mannequin[] a = new Mannequin[5];
@@ -85,6 +100,7 @@ final class Demos {
         java.util.Map<org.bukkit.entity.Player, Location> was = new java.util.HashMap<>();
         d.at(-d.off, () -> {   // 开场就挪（不跟开头那句往后推）
             Location mid = new Location(m.world, C + 2.5, Venue.FY + 0.1, C + 2.5);
+            double[] f = ring(39, Venue.thV(80), 79); mid.setYaw((float) Math.toDegrees(Math.atan2(-(f[0] - mid.getX()), f[2] - mid.getZ()))); mid.setPitch(-8);   // 第一人称举投票器那几秒：看着尺子环
             for (org.bukkit.entity.Player pl : m.world.getPlayers()) { was.put(pl, pl.getLocation()); pl.teleport(mid); }
             for (Who w : m.alive()) if (w.player() == null) m.put(w, Venue.start(m.world, 0.6 + 0.4 * m.rnd.nextDouble(), m.rnd.nextDouble()));
         });
@@ -129,6 +145,30 @@ final class Demos {
         d.at(o + 37.8, () -> { place(m, a[0], Venue.onPlate(m.world, 80, 0.3)); place(m, a[1], Venue.onPlate(m.world, 82, 0.6)); });
         d.cleanup.add(() -> { m.scene.plateReset(); m.scene.needlePark(); m.scene.ballsPark(); for (int v : new int[]{50, 60, 61, 77, 80, 100}) m.scene.mark(v, -1); });
         return d;
+    }
+    /**
+     * 切回自己第一人称的那几秒：每个人物品栏临时放上这几样（格子 → 物品），手里拿 held 那一格；t1 秒（或演示被跳过、收拾的时候）原样放回。
+     * 11-26 用户：「看自己还有几颗星的那个位置，要能看到自己的物品栏还有手」。
+     */
+    static void lend(Match m, Demo d, double t0, double t1, java.util.Map<Integer, org.bukkit.inventory.ItemStack> items, int held) {
+        java.util.Map<org.bukkit.entity.Player, org.bukkit.inventory.ItemStack[]> was = new java.util.HashMap<>();
+        java.util.Map<org.bukkit.entity.Player, Integer> sel = new java.util.HashMap<>();
+        Runnable back = () -> {
+            for (var e : was.entrySet()) {
+                var p = e.getKey(); if (!p.isOnline()) continue; var inv = p.getInventory();
+                for (int s : items.keySet()) inv.setItem(s, e.getValue()[s]);
+                inv.setHeldItemSlot(sel.get(p));
+            }
+            was.clear();
+        };
+        d.at(t0, () -> {
+            for (org.bukkit.entity.Player p : m.world.getPlayers()) {
+                var inv = p.getInventory(); var keep = new org.bukkit.inventory.ItemStack[9];
+                for (var e : items.entrySet()) { keep[e.getKey()] = inv.getItem(e.getKey()); inv.setItem(e.getKey(), e.getValue().clone()); }
+                was.put(p, keep); sel.put(p, inv.getHeldItemSlot()); inv.setHeldItemSlot(held);
+            }
+        });
+        d.at(t1, back); d.cleanup.add(back);
     }
     /** 示范的人从翻开的板子上掉进护城河。 */
     static void sink(Match m, Demo d, Mannequin e) {

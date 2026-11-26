@@ -40,8 +40,16 @@
         Demos.sfx(m, d, 12.2, "flip", 1f, 1f);
         Demos.sfx(m, d, 16.1, "star", 0.9f, 1f);
         d.at(12.2, () -> { if (cardD[0] != null) cardD[0].setItemStack(Match.modelItem("rps0")); if (cardD[1] != null) cardD[1].setItemStack(Match.modelItem("rps1")); });
-        d.cap(15, 21, "赢了拿走对方 1 颗星", "每人 3 颗星，输光就出局", false);
-        d.still(15, 21, Demo.v(camA[0], RY + 2.2, camA[1]), Demo.v(c[0], RY + 1.5, c[1]), 60);
+        d.cap(15, 18.6, "赢了拿走对方 1 颗星", "", false);
+        d.still(15, 18.7, Demo.v(camA[0], RY + 2.2, camA[1]), Demo.v(c[0], RY + 1.5, c[1]), 60);
+        // 11-26 用户：「看自己还有几颗星的那个位置，要能看到自己的物品栏还有手」：切回自己的第一人称，物品栏上摆好三种牌和 3 颗星，手里拿着星
+        d.cap(18.7, 23.4, "物品栏上的星，就是你还剩几颗", "每人 3 颗，输光就出局；旁边几格是手里的牌", false);
+        d.self(18.7, 23.5);
+        java.util.Map<Integer, org.bukkit.inventory.ItemStack> inv = new java.util.HashMap<>();
+        for (int t = 0; t < 3; t++) inv.put(RPS_SLOT[t], m.prop("rps" + t, RPS_NAME[t] + " · 还剩 " + per + " 张", per, "rpsinfo"));
+        inv.put(STAR_SLOT, m.prop("rps_star", "星 · 3 颗（输光了就出局）", 3, "rpsinfo"));
+        Demos.lend(m, d, 18.1, 23.5, inv, STAR_SLOT);
+        d.off += 2.5;   // 多出来的这一屏：后面的时间整体往后挪
         d.at(15.6, () -> {   // 右边那个人胸口的一颗星飞到左边
             if (st.size() < 6 || a[0] == null) return;
             ItemDisplay x = st.get(5); a[1].removePassenger(x);

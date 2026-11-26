@@ -116,7 +116,7 @@ public final class Cine {
                 }
                 int n = 0;
                 for (JsonObject s : arr(o, "caps")) DCAPS.add(new Cap((float) dbl(s, "a", 0), (float) dbl(s, "b", 1), b(s, "x") ? 0 : ++n, s(s, "m", ""), s(s, "s", ""), b(s, "r"), b(s, "g"), b(s, "h")));
-                dKick = s(o, "kick", ""); dTitle = s(o, "title", ""); dWord = s(o, "word", "游戏规则"); dPre = (float) dbl(o, "pre", 0);
+                dKick = s(o, "kick", ""); dTitle = s(o, "title", ""); dWord = s(o, "word", "游戏规则"); dPre = (float) dbl(o, "pre", 0); dLite = b(o, "lite");
                 demoLen = i(o, "len", 600) / 20f; scale = 1; demo = true;
                 preOver = new Shot(0, Math.max(1f, dPre), v(C, 101, C - 52), v(C, 96, C - 44), v(C, 72, C), v(C, 72, C + 2), 60, true);   // 片名卡底下的俯瞰（和片头片名同一处）
                 startAt = now(); endAt = 0; on = !DSHOTS.isEmpty(); hold = false; bankDone = BANK_T.length; stopMusic(); synced = false; lastT = 0;
@@ -136,6 +136,8 @@ public final class Cine {
      * 现在自己放完先压着全黑（hold），等服务器的 stop：stop 和下一段同一刻到就直接接上，后面没有了才从黑里淡回第一人称。最多等 3 秒。
      */
     private static boolean hold; private static long holdAt;
+    /** 轻量机拍（插件 Match.revealCam，揭牌那 2 秒多）：顶上不写字、结尾不压黑，放完直接切回自己的第一人称。 */
+    private static boolean dLite;
     private static double[] nums(JsonObject o, String k) {
         double[] r = new double[6];
         if (o.has(k) && o.get(k).isJsonArray()) { var a = o.getAsJsonArray(k); for (int i = 0; i < Math.min(6, a.size()); i++) r[i] = a.get(i).getAsDouble(); }
@@ -194,7 +196,7 @@ public final class Cine {
     }
     /** 片头正在放：镜头、灯、输入都归这里。 */
     public static boolean active() {
-        if (on && t() >= (demo ? demoLen : TOTAL)) { on = false; hold = true; holdAt = now(); endAt = 0; }
+        if (on && t() >= (demo ? demoLen : TOTAL)) { on = false; hold = !(demo && dLite); holdAt = now(); endAt = 0; }
         return on && Minecraft.getInstance().level != null;
     }
 
@@ -410,14 +412,14 @@ public final class Cine {
         if (t < dPre) { titleCard(g, w, h, t); return; }
         boolean self = selfView();
         if (self) selfMarks(g, w, h, t); else film(g, w, h, t);   // 自己的第一人称：不加胶片暗角颗粒，像平时玩的时候一样；心和红圈画在这里
-        if (!self) text(g, Face.MEDIUM, spaced(dTitle + " · " + dWord), w / 2f, (bars - 8) / 2, 0.7f, 1, INK_QUIET, span(t, dPre + 0.3f, dPre + 0.9f), false);
+        if (!self && !dLite) text(g, Face.MEDIUM, spaced(dTitle + " · " + dWord), w / 2f, (bars - 8) / 2, 0.7f, 1, INK_QUIET, span(t, dPre + 0.3f, dPre + 0.9f), false);
         Cap newest = null;   // 同一时刻只画最新开始的那一句
         for (Cap c : DCAPS) if (t >= c.t0 && (newest == null || c.t0 >= newest.t0)) newest = c;
         for (Cap c : DCAPS) if (c.red && t >= c.t0 && t < c.t0 + 1.4f) redPulse(g, w, h, 1 - (t - c.t0) / 1.4f);
         if (newest != null && t <= newest.t1 + 0.4f) { if (self) selfCap(g, w, h, t, newest); else if (newest.gist) tagline(g, w, h, t, newest); else subtitle(g, w, h, bars, t, newest); }
         // 进出自己的第一人称：原来前后各压黑 1 秒，外部方案第 7 条改成 0.2 秒快暗——11-26 用户：「好多这种短暂黑屏的，这个导致眼睛特别痛……要么就不要，要么就拉长一点」→ 直接硬切
         // 结尾：11-26 同一句，0.4 秒压暗太急，改回慢一点的 0.9 秒（段落之间这一次黑留着，盖住传送）
-        float end = ease(span(t, L - 1.0f, L - 0.1f)); if (end > 0) rect(g, 0, 0, w, h, a(0x000000, end));
+        float end = dLite ? 0 : ease(span(t, L - 1.0f, L - 0.1f)); if (end > 0) rect(g, 0, 0, w, h, a(0x000000, end));
     }
     // ================= 自己的第一人称：红圈、红箭头圈住物品栏上的心 =================
     /**

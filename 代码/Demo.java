@@ -33,6 +33,10 @@ final class Demo {
     static final double PRE = 4.4, SLAM = 2.0;
     /** 之后写的时间都往后挪 off 秒（开头插一段大白话总结时，后面的脚本不用一个个改时间）。 */
     double off = PRE;
+    /** 片名卡几秒（发给模组）；0 = 没有片名卡。 */
+    double pre = PRE;
+    /** 轻量机拍（揭牌那几秒）：不画顶上那行小字、结尾不压黑、放完直接切回自己的第一人称。 */
+    boolean lite;
     final JsonArray shots = new JsonArray(), caps = new JsonArray();
     final List<Object[]> acts = new ArrayList<>();
     final List<Entity> props = new ArrayList<>();
@@ -107,7 +111,7 @@ final class Demo {
 
     JsonObject packet() {
         JsonObject o = new JsonObject(); o.addProperty("k", "cine"); o.addProperty("m", "demo");
-        o.addProperty("len", (int) Math.round(len * 20)); o.addProperty("pre", PRE); o.addProperty("kick", kick); o.addProperty("title", title); o.addProperty("word", word);
+        o.addProperty("len", (int) Math.round(len * 20)); o.addProperty("pre", pre); o.addProperty("lite", lite); o.addProperty("kick", kick); o.addProperty("title", title); o.addProperty("word", word);
         o.add("shots", shots); o.add("caps", caps); return o;
     }
 }

@@ -76,7 +76,8 @@ final class Demos {
         d.cap(o + 6, o + 11.8, "时间到，指针转到目标上", "", false);   // 公式开头说过了，这里只看指针
         d.shot(o + 6, o + 12, ring(4, 180, 92), ring(9, 0, 89), ring(39, Venue.thV(50), 76), ring(39, Venue.thV(50), 76), 60, true);
         d.at(o + 6.4, () -> { m.scene.dt(80); m.scene.needle(50); });
-        sfx(m, d, o + 10.4, "reveal", 0.55f, 1.1f);   // 11-23 音效只留这一下（「音效不是说你加满它就是好的」）
+        sfx(m, d, o + 2.0, "dial", 0.9f, 1f); sfx(m, d, o + 2.35, "dial", 0.9f, 1.08f);   // 11-26 外部视听方案第 11 条：匿名选数，拨盘咔哒两下
+        sfx(m, d, o + 10.4, "lock", 1f, 1f);   // 11-26 第 11 条：指针停住，原来的 reveal 换成清脆的锁定声
         // ② 例一：四个人选 100，一个人选 80 → 平均 96 × 0.8 = 76.8，目标 77
         Mannequin[] a = new Mannequin[5];
         // 示范的人站在尺子环上好几个地方（100、80、60），离大门那头最远 70 多格：服务器只给玩家同步 64 格以内的人。
@@ -98,7 +99,7 @@ final class Demos {
             Location l = Venue.onPlate(m.world, 80, 0.5); a[4] = m.demoActor(d, l, 7); puff(m, l);
         });
         d.at(o + 15.8, () -> { m.scene.dt(30); m.scene.needle(77); m.scene.mark(77, 0); });
-        sfx(m, d, o + 17.3, "reveal", 0.55f, 1.15f);   // 11-23 音效只留这一下（「音效不是说你加满它就是好的」）
+        sfx(m, d, o + 17.3, "lock", 1f, 1f);   // 11-26：指针停住（锁定声）
         d.cap(o + 18, o + 23.8, "选 100 的最远", "四个人一起掉进水里，会受伤", true);
         d.still(o + 18, o + 24, ring(30, Venue.thV(100) - 12, 80.4), ring(39, Venue.thV(100), 76.3), 58);
         d.at(o + 18.3, () -> { m.scene.mark(100, 1); m.scene.mark(80, 0); });
@@ -115,7 +116,7 @@ final class Demos {
             place(m, a[3], Venue.onPlate(m.world, 60, 0.5));
         });
         d.at(o + 27.8, () -> { m.scene.dt(30); m.scene.needle(61); m.scene.mark(61, 0); });
-        sfx(m, d, o + 29.3, "reveal", 0.55f, 1.15f);   // 11-23 音效只留这一下（「音效不是说你加满它就是好的」）
+        sfx(m, d, o + 29.3, "lock", 1f, 1f);   // 11-26：指针停住（锁定声）
         d.cap(o + 30, o + 35.3, "这一次，选 80 的最远", "四个人一起掉下去，选 60 的安全", true);
         d.still(o + 30, o + 35.5, ring(30, Venue.thV(80) + 12, 80.4), ring(39, Venue.thV(80), 76.3), 58);
         d.at(o + 30.3, () -> { m.scene.mark(80, 1); m.scene.mark(60, 0); });
@@ -251,13 +252,16 @@ final class Demos {
         d.cap(3, 8.8, "钢梁会左右晃", "往哪边歪，就反方向按 A / D", false);
         d.shot(3, 9, v(-7, 122.5, z0 + 1.7), v(5, 122.5, z0 + 1.7), v(-1, 120.9, z0), v(11, 120.9, z0), 62, false);
         wobble(m, d, () -> p[0], z0, 3, -2, 9, 10, 0.75, 0.22);
+        sfx(m, d, 3.4, "beam", 1f, 1f);   // 11-26 外部视听方案第 13 条：钢梁受压吱嘎一声（很轻，不循环）
         // ② 起风：一个蹲下，一个站着被吹下去，被接住送回起点
         d.cap(9, 12.2, "起风了，按住 Shift", "不蹲下，会被直接吹下去", false);
         // 11-25 审查：「掉下去回起点重来」原来写在最后一屏，和「通电之后回不去」前后打架——放到被吹下去、在起点冒出来的这一拍
         d.cap(12.2, 14.8, "掉下去，回起点重来", "", false);
         d.still(9, 12.2, v(16, 123.4, z2 + 5.5), v(14.5, 120.6, z1), 64);
-        d.at(9.2, () -> { for (int t = 0; t < 60; t += 3) m.later(t, () -> { if (m.curDemo == d) m.windFx(1); }); m.soundV("hechao_zhidou:zd.gust", 0.9f, 1f); });
-        sfx(m, d, 10.8, "hurt", 0.6f, 1f);   // 11-23 音效只留这一下（「音效不是说你加满它就是好的」）
+        d.at(9.2, () -> { for (int t = 0; t < 60; t += 3) m.later(t, () -> { if (m.curDemo == d) m.windFx(1); }); });
+        sfx(m, d, 9.0, "gust", 0.9f, 1f);   // 11-26 第 13 条：风声比风的粒子早 0.2 秒进
+        sfx(m, d, 10.8, "hurt", 0.6f, 1f);
+        sfx(m, d, 10.9, "swish", 0.8f, 1f);   // 11-26：被吹下去，一道失重的风切
         d.at(9.6, () -> { if (p[1].isValid()) p[1].setPose(Pose.SNEAKING, true); });
         d.at(13.8, () -> { if (p[1].isValid()) p[1].setPose(Pose.STANDING, false); });
         d.at(10.8, () -> { if (p[2].isValid()) p[2].playHurtAnimation(0); });
@@ -276,6 +280,7 @@ final class Demos {
         d.at(21.9, () -> m.soundV("hechao_zhidou:zd.up", 0.8f, 1.2f));
         d.cap(20, 25.8, "有人走到对面，起点通电", "通电之后，掉下去就回不去了", true);
         for (int k : new int[]{k3, k0, k1, k2}) crawl(m, d, k, 22.4, 0.3);
+        sfx(m, d, 22.2, "breaker", 1f, 1f); sfx(m, d, 22.5, "arc", 0.8f, 1f);   // 11-26 第 14 条：起点合闸「哐」一声，接电弧往前爬
         d.shot(22.4, 26, v(-15, 124.6, z2 + 4.5), v(-7, 124.6, z2 + 4.5), v(-22, 120.4, z0 + 1.5), v(-3, 120.4, z0 + 1.5), 66, true);
         d.at(22.6, () -> { if (p[2].isValid()) { p[2].playHurtAnimation(0); m.world.spawnParticle(Particle.ELECTRIC_SPARK, p[2].getLocation().add(0, 1, 0), 60, 0.3, 0.5, 0.3, 0.3, null, true); } });
         fall(m, d, () -> p[2], 22.7, 14, 18, 0, 1.5);
@@ -300,6 +305,7 @@ final class Demos {
         wobble(m, d, () -> pu[0], z7, 32.6, 24, 33.6, 24.6, 0.25, 0.35);
         fall(m, d, () -> pu[0], 33.7, 14, 18, 0.3, 2.2);
         sfx(m, d, 32.5, "hurt", 0.6f, 1.1f);
+        sfx(m, d, 32.5, "punch", 0.9f, 1f); sfx(m, d, 32.8, "uiwarn", 0.8f, 1f);   // 11-26 第 14 条：推人一声闷响，被推的人屏幕提示音
         d.cleanup.add(() -> {
             for (int b = 0; b < Venue.B_N; b++) {
                 m.scene.set("bzb" + (b + 1) + ".var", -1);
@@ -340,6 +346,7 @@ final class Demos {
             }
         });
         d.cap(3, 8.8, "转过身，给别人看你的花色", "按住 Shift 蹲下，能把牌盖住", false);
+        sfx(m, d, 5.6, "cloth", 1f, 1f);   // 11-26 外部视听方案第 15 条：蹲下盖牌，衣服「刷」一声
         d.at(5.6, () -> { if (w[2] != null) { w[2].covered = true; m.lampOn(w[2]); if (w[2].dummy != null) w[2].dummy.setPose(Pose.SNEAKING, true); } });    // 右边那个人蹲下把牌盖上，再站起来
         d.at(8.0, () -> { if (w[2] != null) { w[2].covered = false; m.lampOn(w[2]); if (w[2].dummy != null) w[2].dummy.setPose(Pose.STANDING, true); } });
         // 11-25 审查：原来三个人一直背对镜头，接着就分头进房，看不出是怎么知道自己花色的——左边两个先互相看一眼背后
@@ -350,6 +357,8 @@ final class Demos {
         d.cap(9, 15.3, "问清自己的花色，再走进那一区的房间", "告诉你花色的人，可能在骗你", false);
         d.still(9, 15.5, v(HX, 72.6, HZ + 21), v(HX, 70.9, HZ + 11.5), 62);   // 从走廊尽头往回看：人朝镜头走过来，分头进两边的房间
         d.at(9.1, () -> { m.setCell(Z, 0, true); m.setCell(Z, 1, true); });
+        sfx(m, d, 9.1, "beep", 0.9f, 1f);   // 11-26 第 15 条：房间亮绿灯「滴」
+        sfx(m, d, 16.4, "pulse", 0.8f, 1f);   // 11-26 第 15 条：没进房间的人在门外转来转去，两下心跳（方案说拿不准，嫌杂删这一行）
         {
             double[] a0 = Venue.pw(Z, 6.5, -1.5), a1 = Venue.pw(Z, 10.5, -0.6), a2 = Venue.pw(Z, 16, -2.2), a3 = Venue.pw(Z, 16, -4.0), a4 = Venue.pw(Z, 16, -5.8);
             track(m, d, () -> w[0] == null ? null : w[0].body(), y, new double[]{9.3, a0[0], a0[1]}, new double[]{10.6, a1[0], a1[1]}, new double[]{12.5, a2[0], a2[1]}, new double[]{13.0, a3[0], a3[1]}, new double[]{13.6, a4[0], a4[1]});
@@ -372,13 +381,13 @@ final class Demos {
             d.still(21, 26.3, v(j0[0], 72.4, j0[1]), v(j1[0], 71.2, j1[1]), 60);
         }
         d.at(21.2, () -> { for (int i = 0; i < 2; i++) { m.setCell(Z, i, false); m.scene.set("hcl" + Z + "_" + i + ".var", 2); } });
-        sfx(m, d, 21.2, "slam", 0.85f, 1.05f);   // 11-23 音效只留这一下（「音效不是说你加满它就是好的」）
+        sfx(m, d, 21.2, "slam", 1f, 1f);   // 11-26 第 16 条：实录牢门砸上
         d.at(23.4, () -> {
             m.scene.dt(14); m.scene.set("hcd" + Z + "_1.sw", Venue.P_OPEN); m.scene.set("hcl" + Z + "_1.var", 1);
             int[] b = Venue.doorBlock(Z, 1); for (int yy = 0; yy < 2; yy++) m.world.getBlockAt(b[0], (int) PY + yy, b[1]).setType(Material.AIR, false);
             m.cOpen[Z][1] = true;
         });
-        sfx(m, d, 23.4, "door", 0.85f, 1.1f);   // 11-23 音效只留这一下（「音效不是说你加满它就是好的」）
+        sfx(m, d, 23.4, "door", 0.9f, 1f);   // 11-26：实录重门滑开
         // 11-25「走到这个门口，他穿模了」：不再让人从房间里走出来，只亮绿灯、开门
         // 11-23（「花色的这一段感觉演出有一点问题」）：原来是广角从背后拍，放电的人背对镜头、进错门的人关在门里，画面上看不出发生了什么。
         // 改成两镜：先正面近景看没进房间的那个人被电（他正好朝着镜头），再切到进错的那一间门口，红灯亮、门缝里冒电火花。放电自己有声音（zap），不另加。
@@ -421,17 +430,23 @@ final class Demos {
         d.cap(3, 9, "一边拿皇帝，一边拿奴隶", "另外各 4 张市民", false);
         d.shot(3, 27, near, v(C + 2.0, 68.4, C + 2.7), table, table, 52, true);
         d.at(3.3, () -> { m.hostEmp = true; m.ecSides(); m.ecDeal(); });
+        // 11-26 外部视听方案第 20 条：三张牌一张一张落下（和模组 Cine.ecardGist 对齐：3.25 / 3.6 / 3.95 秒），红线绕回皇帝那一下拔刀声；发牌声
+        for (int i = 0; i < 3; i++) sfx(m, d, 3.25 + 0.35 * i, "draw", 0.9f, 0.95f - 0.05f * i);
+        sfx(m, d, 5.2, "blade", 0.9f, 1f);
+        sfx(m, d, 3.6, "deal", 0.8f, 1f);
         d.cap(9, 15, "两边同时扣下一张牌", "牌扣下后不能再改，同时翻开", false);
         d.at(10.0, () -> { m.ecPut(true, 3); m.ecPut(false, 4); });
+        sfx(m, d, 10.0, "draw", 0.8f, 1f); sfx(m, d, 10.3, "draw", 0.8f, 1.05f);   // 11-26：两边扣牌
         d.cap(15, 21, "同时翻牌", "市民碰市民作废，接着出", false);   // 克制链第一屏讲过了
         d.at(15.4, () -> { m.ecFlip(true); m.ecFlip(false); });
-        sfx(m, d, 15.4, "flip", 0.9f, 1f);   // 11-23 音效只留这一下（「音效不是说你加满它就是好的」）
+        sfx(m, d, 15.4, "flip", 1f, 1f);   // 11-26：实录翻牌
         d.at(18.2, () -> { m.ecDiscard(true); m.ecDiscard(false); });
         d.cap(21, 27, "奴隶碰上皇帝，奴隶赢", "每 " + per + " 局换边 · 奴隶赢 3 分，皇帝赢 1 分", false);
         d.at(21.2, () -> { m.hostEmp = false; m.ecSides(); m.ecDeal(); });
+        sfx(m, d, 21.2, "deal", 0.8f, 1f); sfx(m, d, 22.3, "draw", 0.8f, 1f); sfx(m, d, 22.6, "draw", 0.8f, 1.05f);
         d.at(22.3, () -> { m.ecPut(true, 1); m.ecPut(false, 1); });
         d.at(24.4, () -> { m.ecFlip(true); m.ecFlip(false); });
-        sfx(m, d, 24.4, "flip", 0.9f, 1f);   // 11-23 音效只留这一下（「音效不是说你加满它就是好的」）
+        sfx(m, d, 24.4, "flip", 1f, 1f); sfx(m, d, 24.45, "impact", 0.8f, 1f);   // 11-26 第 20 条：奴隶赢皇帝，翻牌叠一声重低音
         // 挑战席上坐一个示范的人（真的挑战者演完才上桌）：最后一步他连人带活板翻下去
         Location seat = Venue.plate4(m.world);
         Who[] ch = new Who[1];
@@ -444,7 +459,7 @@ final class Demos {
             m.scene.dt(10); m.scene.set("plate4.sw", -900);
             if (ch[0] != null && ch[0].chair != null) m.slide(ch[0], ch[0].chair.getLocation().clone().add(0, -6, 0), 14);
         });
-        sfx(m, d, 31.2, "trap", 1f, 0.9f);   // 11-23 音效只留这一下（「音效不是说你加满它就是好的」）
+        sfx(m, d, 31.2, "trap", 1f, 1f); sfx(m, d, 31.5, "swish", 0.8f, 0.9f);   // 11-26 第 20 条：活板翻开轰一声，接一道往下掉的风
         d.at(33.6, () -> { if (ch[0] != null) { m.unseat(ch[0]); Entity e = ch[0].body(); if (e != null) e.remove(); } m.scene.dt(20); m.scene.set("plate4.sw", 0); });
         d.cleanup.add(() -> { if (ch[0] != null) m.unseat(ch[0]); m.scene.dt(20); m.scene.set("plate4.sw", 0); });
         return d;

@@ -180,7 +180,7 @@ public final class Cine {
         var sm = Minecraft.getInstance().getSoundManager();
         sm.stop(Identifier.fromNamespaceAndPath("hechao_zhidou", "zd.drone"), null);
     }
-    private static void stopMusic() { if (opBed > 0) { stopBed(); opBed = 0; } if (music != null) { Minecraft.getInstance().getSoundManager().stop(music); music = null; } if (opBgm) { opBgm = false; Bgm.stop(20); } }
+    private static void stopMusic() { if (opBed > 0) { stopBed(); opBed = 0; } if (music != null) { Minecraft.getInstance().getSoundManager().stop(music); music = null; } if (opBgm) { opBgm = false; Bgm.stop(50); } }   // 11-26「第一个大环节转到第二个 BGM 的时候……切得太快了，留一点气口」：片头配乐 2.5 秒淡出（讲规则那首晚一拍再进，见插件 playDemo）
 
     /**
      * 片头里的第几秒（正常节奏的秒）。规则演示跟着服务器走（11-22「过场动画里 NPC 动效每个人还不同步」）：示范的人是服务器一刻一刻挪的，
@@ -243,7 +243,10 @@ public final class Cine {
     /** 第 b 圈亮了多少（0 黑 – 1 全亮）：一下子亮，不是慢慢淡入。 */
     private static float bank(int b) {
         float t = t(), k = Math.max(0, Math.min(1, (t - BANK_T[b]) / 0.16f));
-        if (t >= BANK_T[b] && b >= bankDone) { bankDone = b + 1; ZdFx.play("op_light", 1f - 0.04f * b, 0.9f); }
+        if (t >= BANK_T[b] && b >= bankDone) {
+            bankDone = b + 1; ZdFx.play("op_light", 1f - 0.04f * b, 0.9f);
+            if (b >= 5) ZdFx.play("breaker", 0.85f, b == 5 ? 0.5f : 0.9f);   // 11-26 外部视听方案第 2 条：最后两圈（坑底、吊鼓）叠一层重闸，一圈比一圈压得重
+        }
         return k;
     }
     /** 离漏斗场中心多远算第几圈（远的先亮）。 */
@@ -282,7 +285,7 @@ public final class Cine {
             if (opBed > 0) { stopBed(); opBed = 0; }   // 片头的底噪跟着片头一起停
             if (hold && now() - holdAt > 1000) { hold = false; endAt = now(); }   // 服务器一直没说停：别永远黑着（11-26 外部方案第 5 条：停黑最多 1 秒）
             if (hold) { rect(g, 0, 0, w, h, solid(0x000000)); return; }
-            float k = endAt == 0 ? 0 : 1 - (now() - endAt) / 350f;   // 11-26 第 10 条：0.35 秒亮回第一人称
+            float k = endAt == 0 ? 0 : 1 - ease(Math.min(1, (now() - endAt) / 800f));   // 11-26「太短暂了……要么就拉长一点」：0.8 秒慢慢亮回第一人称
             if (k > 0) rect(g, 0, 0, w, h, a(0x000000, k));
             return;
         }
@@ -312,17 +315,14 @@ public final class Cine {
      */
     /*
      * 11-26 用户：「用了太多的黑屏淡出转场、淡入转场啊，整个眼睛的观感会变得特别累」，外部视听方案第 3、4 条：
-     * 六幕快切踩配乐重拍硬切，只在切点后留 0.08 秒暗帧（跨三百格跳去列车，防一帧没装好）；气口交给切点前 0.15 秒的风声（opSounds）。
+     * 六幕快切踩配乐重拍硬切（不压黑、也不留暗帧）；气口交给切点前 0.15 秒的风声（opSounds）。
      * 选手入场 0.25 秒压暗一下（不压全黑）；主持人、正脸、片名同一个场子，直接硬切。
      */
     private static float opDip(float t) {
-        float k = 0;
-        for (int i = 0; i <= 5; i++) k = Math.max(k, flash(t, T_MONT + i * MONT, 0.08f));
-        k = Math.max(k, 0.7f * dip(t, T_LINE, 0.12f, 0, 0.13f));
-        return k;
+        // 11-26 实看：「6幕的时候有个特别快速短暂的黑屏，这让我眼睛看得很难受……干脆把黑屏转场去掉」——六幕快切连 0.08 秒暗帧也不要，纯硬切
+        // 选手入场原来 0.25 秒压暗七成，也是一下「短暂黑屏」——11-26「确实有好多这种短暂黑屏的，这个导致眼睛特别痛」，去掉，硬切 + 一声冲击
+        return 0;
     }
-    /** 切点 c 那一刻全黑，len 秒内亮回来（硬切后面的一个暗帧）。 */
-    private static float flash(float t, float c, float len) { return t < c || t > c + len ? 0 : 1 - (t - c) / len; }
     /** 切点 c 前 out 秒压黑，全黑停 hold 秒，再用 in 秒亮回来（两头缓）。 */
     private static float dip(float t, float c, float out, float hold, float in) {
         if (t < c - out || t > c + hold + in) return 0;
@@ -378,11 +378,9 @@ public final class Cine {
         for (Cap c : DCAPS) if (t >= c.t0 && (newest == null || c.t0 >= newest.t0)) newest = c;
         for (Cap c : DCAPS) if (c.red && t >= c.t0 && t < c.t0 + 1.4f) redPulse(g, w, h, 1 - (t - c.t0) / 1.4f);
         if (newest != null && t <= newest.t1 + 0.4f) { if (self) selfCap(g, w, h, t, newest); else if (newest.gist) tagline(g, w, h, t, newest); else subtitle(g, w, h, bars, t, newest); }
-        // 进出自己的第一人称：11-26 外部方案第 7 条，原来前后各压黑 1 秒，改成切点两边一共 0.2 秒的快暗（只为盖住换镜头那一帧）
-        float sk = 0;
-        for (int i = 0; i < DSHOTS.size(); i++) if (i == 0 ? DSHOTS.get(0).self : DSHOTS.get(i).self != DSHOTS.get(i - 1).self) sk = Math.max(sk, dip(t, DSHOTS.get(i).t0, 0.05f, 0.03f, 0.12f));
-        if (sk > 0) rect(g, 0, 0, w, h, a(0x000000, sk));
-        float end = ease(span(t, L - 0.5f, L - 0.1f)); if (end > 0) rect(g, 0, 0, w, h, a(0x000000, end));   // 11-26 第 8 条：结尾 0.4 秒压暗（原来 0.8 秒）
+        // 进出自己的第一人称：原来前后各压黑 1 秒，外部方案第 7 条改成 0.2 秒快暗——11-26 用户：「好多这种短暂黑屏的，这个导致眼睛特别痛……要么就不要，要么就拉长一点」→ 直接硬切
+        // 结尾：11-26 同一句，0.4 秒压暗太急，改回慢一点的 0.9 秒（段落之间这一次黑留着，盖住传送）
+        float end = ease(span(t, L - 1.0f, L - 0.1f)); if (end > 0) rect(g, 0, 0, w, h, a(0x000000, end));
     }
     // ================= 自己的第一人称：红圈、红箭头圈住物品栏上的心 =================
     /**
@@ -478,7 +476,7 @@ public final class Cine {
         // 11-26 外部方案第 6、9 条：不再铺 4.4 秒全黑。开头 0.3 秒还是黑的（接上一段的黑、盖住传送），然后压暗 65% 的当幕场景浮出来，
         // 字浮在上面；字淡掉的同时场景提亮，切进第一镜时已经是正常亮度
         film(g, w, h, t);
-        float dark = (t < 0.3f ? 1 : 0.65f + 0.35f * (1 - ease(span(t, 0.3f, 1.1f)))) * (1 - ease(span(t, dPre - CARD_OUT, dPre - 0.2f)));
+        float dark = (t < 0.5f ? 1 : 0.65f + 0.35f * (1 - ease(span(t, 0.5f, 1.6f)))) * (1 - ease(span(t, dPre - CARD_OUT, dPre - 0.2f)));   // 11-26：从黑里慢慢浮出来（1.1 秒），不是一闪
         if (dark > 0) rect(g, 0, 0, w, h, a(0x000000, dark));
         float slam = SLAM_AT, fo = 1 - span(t, dPre - CARD_OUT, dPre - CARD_BLACK), cy = h * 0.46f, sc = 3.3f;
         band(g, w, cy - 70, cy + 60, 0.45f * fo * span(t, 0.3f, 1.1f));

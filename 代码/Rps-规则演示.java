@@ -35,7 +35,9 @@
             });
         }
         // 11-23 用户：「音效不是说你加满它就是好的」——这段只留两下：翻牌、星被拿走
-        Demos.sfx(m, d, 12.2, "flip", 0.9f, 1f);
+        Demos.sfx(m, d, 3.4, "kin", 0.9f, 1f);   // 11-26 外部视听方案第 19 条：站进金线圈，金属「叮」
+        Demos.sfx(m, d, 9.6, "draw", 0.8f, 1f); Demos.sfx(m, d, 10.4, "draw", 0.8f, 1.05f);   // 11-26：两边扣牌
+        Demos.sfx(m, d, 12.2, "flip", 1f, 1f);
         Demos.sfx(m, d, 16.1, "star", 0.9f, 1f);
         d.at(12.2, () -> { if (cardD[0] != null) cardD[0].setItemStack(Match.modelItem("rps0")); if (cardD[1] != null) cardD[1].setItemStack(Match.modelItem("rps1")); });
         d.cap(15, 21, "赢了拿走对方 1 颗星", "每人 3 颗星，输光就出局", false);

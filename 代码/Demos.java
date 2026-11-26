@@ -48,11 +48,6 @@ final class Demos {
     }
     /** 过场里 t 秒响一声（耳边放；11-23「专业电影的影视级音效……所有的那些配音都要齐全」：画面里每个动作都要有声音）。 */
     static void sfx(Match m, Demo d, double t, String n, float v, float p) { d.at(t, () -> m.soundV(Match.Z + n, v, p)); }
-    /**
-     * 演示里也先教会「配乐一停就要出事」（11-26 外部视听方案第二版第 10 条，用户：「动态配乐是对的……我让它的这整个问题就是为了修这个东西了」）：
-     * t 秒把讲规则的配乐 0.2 秒抽干，hold 秒以后 1.5 秒淡回来（演示结束也会淡回来）。
-     */
-    static void vac(Match m, Demo d, double t, double hold) { d.at(t, () -> m.vacuum(Match.tk(hold))); }
     static void puff(Match m, Location l) { m.world.spawnParticle(Particle.CLOUD, l.clone().add(0, 0.8, 0), 30, 0.35, 0.5, 0.35, 0.03, null, true); m.sfx(l, "hechao_zhidou:zd.slide", 0.6f, 1.6f); }
     static void splash(Match m, Entity e) {
         m.sfx(e.getLocation(), "hechao_zhidou:zd.splash", 0.9f, 1f);
@@ -83,9 +78,6 @@ final class Demos {
         d.at(o + 6.4, () -> { m.scene.dt(80); m.scene.needle(50); });
         sfx(m, d, o + 2.0, "dial", 0.9f, 1f); sfx(m, d, o + 2.35, "dial", 0.9f, 1.08f);   // 11-26 外部视听方案第 11 条：匿名选数，拨盘咔哒两下
         sfx(m, d, o + 10.4, "lock", 1f, 1f);   // 11-26 第 11 条：指针停住，原来的 reveal 换成清脆的锁定声
-        vac(m, d, o + 10.2, 1.6);   // 指针停住前一拍抽空
-        vac(m, d, o + 17.1, 5.2);   // 例一：指针停住 → 翻板 → 落水，全在安静里
-        vac(m, d, o + 29.1, 5.1);   // 例二：同上
         // ② 例一：四个人选 100，一个人选 80 → 平均 96 × 0.8 = 76.8，目标 77
         Mannequin[] a = new Mannequin[5];
         // 示范的人站在尺子环上好几个地方（100、80、60），离大门那头最远 70 多格：服务器只给玩家同步 64 格以内的人。
@@ -177,7 +169,6 @@ final class Demos {
         d.cap(0.6, 5.0, "物品栏上的心，就是你的命", "", false, false).heartMark();
         sfx(m, d, 0.6 + BING_AFTER, "bing", 1f, 1f);   // 大字落下 0.9 秒后三下「冰」：红圈、红箭头、「就是你的命」一下一个（模组 Cine.BING_AFTER 同一个数）
         d.cap(5.2, 10.0, "每一场游戏输了，都会受伤", "心扣光，就出局", true, false);
-        vac(m, d, 4.95, 2.6);   // 11-26 外部视听方案第二版第 8 条：最后一颗心空掉前一拍配乐骤停   // 还是自己的第一人称：红圈留着，最后一颗心空掉
         // 11-25 审查：「六场游戏、1 个人通关」片头已经说过——这里补片头没说的：出局了去哪
         // 镜头在北边高处慢慢推（11-25「跳得太快了」「怎么全部运到那个球上了」：六个铁球停在南边起点平台头顶，别从那边拍）
         d.cap(10.9, 16.0, "越往后的游戏，伤得越重", "撑到最后的人，坐上坑底牌桌和主持人决战", false, false);   // 压黑切回漏斗场（模组在自己视角进出都压黑）
@@ -289,8 +280,6 @@ final class Demos {
         d.at(21.9, () -> m.soundV("hechao_zhidou:zd.up", 0.8f, 1.2f));
         d.cap(20, 25.8, "有人走到对面，起点通电", "通电之后，掉下去就回不去了", true);
         for (int k : new int[]{k3, k0, k1, k2}) crawl(m, d, k, 22.4, 0.3);
-        vac(m, d, 22.0, 2.6);   // 起点通电：合闸、电弧、第一个人被电下去，配乐抽空
-        vac(m, d, 26.1, 1.8);   // 电追上钢管上的人
         sfx(m, d, 22.2, "breaker", 1f, 1f); sfx(m, d, 22.5, "arc", 0.8f, 1f);   // 11-26 第 14 条：起点合闸「哐」一声，接电弧往前爬
         d.shot(22.4, 26, v(-15, 124.6, z2 + 4.5), v(-7, 124.6, z2 + 4.5), v(-22, 120.4, z0 + 1.5), v(-3, 120.4, z0 + 1.5), 66, true);
         d.at(22.6, () -> { if (p[2].isValid()) { p[2].playHurtAnimation(0); m.world.spawnParticle(Particle.ELECTRIC_SPARK, p[2].getLocation().add(0, 1, 0), 60, 0.3, 0.5, 0.3, 0.3, null, true); } });
@@ -393,7 +382,6 @@ final class Demos {
         }
         d.at(21.2, () -> { for (int i = 0; i < 2; i++) { m.setCell(Z, i, false); m.scene.set("hcl" + Z + "_" + i + ".var", 2); } });
         sfx(m, d, 21.2, "slam", 1f, 1f);   // 11-26 第 16 条：实录牢门砸上
-        vac(m, d, 21.15, 10.3);   // 门砸上的同一刻抽空：开门、两次放电都是干声，讲内鬼时再回来
         d.at(23.4, () -> {
             m.scene.dt(14); m.scene.set("hcd" + Z + "_1.sw", Venue.P_OPEN); m.scene.set("hcl" + Z + "_1.var", 1);
             int[] b = Venue.doorBlock(Z, 1); for (int yy = 0; yy < 2; yy++) m.world.getBlockAt(b[0], (int) PY + yy, b[1]).setType(Material.AIR, false);
@@ -452,8 +440,6 @@ final class Demos {
         d.cap(15, 21, "同时翻牌", "市民碰市民作废，接着出", false);   // 克制链第一屏讲过了
         d.at(15.4, () -> { m.ecFlip(true); m.ecFlip(false); });
         sfx(m, d, 15.4, "flip", 1f, 1f);   // 11-26：实录翻牌
-        vac(m, d, 15.0, 1.6); vac(m, d, 24.0, 2.0);   // 两次翻牌前 0.4 秒抽空
-        vac(m, d, 30.5, 6);   // 活板翻开：抽空到演示结束
         d.at(18.2, () -> { m.ecDiscard(true); m.ecDiscard(false); });
         d.cap(21, 27, "奴隶碰上皇帝，奴隶赢", "每 " + per + " 局换边 · 奴隶赢 3 分，皇帝赢 1 分", false);
         d.at(21.2, () -> { m.hostEmp = false; m.ecSides(); m.ecDeal(); });

@@ -257,8 +257,6 @@ public final class Cine {
         return new double[]{want.x, want.y, want.z, Math.toDegrees(Math.atan2(-dx, dz)), -Math.toDegrees(Math.atan2(dy, h))};
     }
     public static boolean focusing() { return focusOn && !active(); }
-    /** 正在放讲规则的演示（不算真打时揭牌那种轻量机拍）。 */
-    public static boolean explaining() { return active() && demo && !dLite; }
     public static double[] camera() {
         if (focusing()) return focusCamera();
         if (!active()) return null;

@@ -61,7 +61,7 @@ final class Demos {
      * 11-18 用户：「说明一定要先最浅显的说明……场上有这么多数字，所有玩家选到的数乘以零点八，离得最近的才可以不会被掉下去」
      * 「不要说这个十几的数，是先要让人想到哦，所有人选一百，那我就选八十。那如果人选八十呢，那我就再选六十，要这样子让他自己想出这个思维」。
      * 所以：先一句大白话讲怎么赢怎么输 → 例一：四个人选 100、一个人选 80（目标 77，选 80 的站住）→ 例二：大家都这么想、都选 80，
-     * 一个人选 64（目标 61，选 64 的站住）→ 「那你，选几？」——只把想法推两步，不给答案。
+     * 一个人选 60（目标 61，选 60 的站住）；11-25 用户：「选数字的时候避免64这个数字……一个80，一个60」→ 「那你，选几？」——只把想法推两步，不给答案。
      */
     static Demo zero(Match m) {
         Demo d = new Demo(Match.cn(1), Match.A_NAMES[0]);
@@ -79,7 +79,7 @@ final class Demos {
         sfx(m, d, o + 10.4, "reveal", 0.55f, 1.1f);   // 11-23 音效只留这一下（「音效不是说你加满它就是好的」）
         // ② 例一：四个人选 100，一个人选 80 → 平均 96 × 0.8 = 76.8，目标 77
         Mannequin[] a = new Mannequin[5];
-        // 示范的人站在尺子环上好几个地方（100、80、64），离大门那头最远 70 多格：服务器只给玩家同步 64 格以内的人。
+        // 示范的人站在尺子环上好几个地方（100、80、60），离大门那头最远 70 多格：服务器只给玩家同步 64 格以内的人。
         // 演示时把所有人的本体先挪到坑底正中间（离整圈尺子都在 50 格以内），演完放回原处（选手接着被送去起点）
         java.util.Map<org.bukkit.entity.Player, Location> was = new java.util.HashMap<>();
         d.at(-d.off, () -> {   // 开场就挪（不跟开头那句往后推）
@@ -103,8 +103,8 @@ final class Demos {
         d.still(o + 18, o + 24, ring(30, Venue.thV(100) - 12, 80.4), ring(39, Venue.thV(100), 76.3), 58);
         d.at(o + 18.3, () -> { m.scene.mark(100, 1); m.scene.mark(80, 0); });
         d.at(o + 20.3, () -> { m.scene.drop(100); m.soundV("hechao_zhidou:zd.trap", 1f, 0.95f); for (int i = 0; i < 4; i++) sink(m, d, a[i]); });
-        // ③ 例二：大家都这么想，都选 80 → 一个人选 64：平均 76.8 × 0.8 = 61.4，目标 61
-        d.cap(o + 24, o + 29.8, "再看一组：四人选 80，一人选 64", "平均 76.8，乘 0.8，目标变成 61", false);
+        // ③ 例二：大家都这么想，都选 80 → 一个人选 60：平均 76 × 0.8 = 60.8，目标 61（11-25 用户：「避免64这个数字……一个80，一个60」）
+        d.cap(o + 24, o + 29.8, "再看一组：四人选 80，一人选 60", "平均 76，乘 0.8，目标变成 61", false);
         d.still(o + 24, o + 27, ring(31, Venue.thV(80) + 11, 79.6), ring(39, Venue.thV(80), 76.9), 56);
         d.still(o + 27, o + 30, ring(29, (Venue.thV(62) + 1.5), 80), ring(39, (Venue.thV(62) + 1.5), 76.8), 60);
         d.at(o + 24.1, () -> {
@@ -112,13 +112,13 @@ final class Demos {
             double[] al = {0.12, 0.37, 0.63};
             for (int i = 0; i < 3; i++) place(m, a[i], Venue.onPlate(m.world, 80, al[i]));
             place(m, a[4], Venue.onPlate(m.world, 80, 0.88));
-            place(m, a[3], Venue.onPlate(m.world, 64, 0.5));
+            place(m, a[3], Venue.onPlate(m.world, 60, 0.5));
         });
         d.at(o + 27.8, () -> { m.scene.dt(30); m.scene.needle(61); m.scene.mark(61, 0); });
         sfx(m, d, o + 29.3, "reveal", 0.55f, 1.15f);   // 11-23 音效只留这一下（「音效不是说你加满它就是好的」）
-        d.cap(o + 30, o + 35.3, "这一次，选 80 的最远", "四个人一起掉下去，选 64 的安全", true);
+        d.cap(o + 30, o + 35.3, "这一次，选 80 的最远", "四个人一起掉下去，选 60 的安全", true);
         d.still(o + 30, o + 35.5, ring(30, Venue.thV(80) + 12, 80.4), ring(39, Venue.thV(80), 76.3), 58);
-        d.at(o + 30.3, () -> { m.scene.mark(80, 1); m.scene.mark(64, 0); });
+        d.at(o + 30.3, () -> { m.scene.mark(80, 1); m.scene.mark(60, 0); });
         d.at(o + 32.2, () -> { m.scene.drop(80); m.soundV("hechao_zhidou:zd.trap", 1f, 1.05f); for (int i : new int[]{0, 1, 2, 4}) sink(m, d, a[i]); });
         // ④ 不给答案，留给他自己想
         // 11-25 审查：原来对着空场干念——同一个机位看翻板合上、掉下去的两个人爬回板上
@@ -126,7 +126,7 @@ final class Demos {
         d.still(o + 35.5, o + 41.5, ring(30, Venue.thV(80) + 12, 80.4), ring(39, Venue.thV(80), 76.3), 58);
         d.at(o + 36.6, () -> m.scene.plateReset());
         d.at(o + 37.8, () -> { place(m, a[0], Venue.onPlate(m.world, 80, 0.3)); place(m, a[1], Venue.onPlate(m.world, 82, 0.6)); });
-        d.cleanup.add(() -> { m.scene.plateReset(); m.scene.needlePark(); m.scene.ballsPark(); for (int v : new int[]{50, 61, 64, 77, 80, 100}) m.scene.mark(v, -1); });
+        d.cleanup.add(() -> { m.scene.plateReset(); m.scene.needlePark(); m.scene.ballsPark(); for (int v : new int[]{50, 60, 61, 77, 80, 100}) m.scene.mark(v, -1); });
         return d;
     }
     /** 示范的人从翻开的板子上掉进护城河。 */
@@ -144,20 +144,34 @@ final class Demos {
     }
     /** 示范的人换到另一块板上（冒一下烟）。 */
     static void place(Match m, Mannequin e, Location l) { if (e == null || !e.isValid()) return; e.teleport(l); puff(m, l); }
-    /** 整局只讲这一次的心：片名之后、演第一幕之前。 */
+    /** 「物品栏上的心」大字落下后几秒放三下「冰」（和模组 Cine.BING_AFTER 一致）。 */
+    static final double BING_AFTER = 0.9;
     /**
      * 整局只讲一次的「游戏目标」（11-25 用户：「先把游戏目标讲好，然后再去讲游戏，这个演出才是对的」）：
-     * 开场片头放完、第一幕的片名卡之前，单独一段：心就是命 → 六场一场一场打、活到最后的才通关。不讲决战（打到最后才揭开）。
+     * 开场片头放完、第一幕的片名卡之前，单独一段：心就是命（自己的第一人称，红圈圈住心）→ 输了受伤、心扣光出局 → 越往后伤得越重、撑到最后的去决战。
      */
     static Demo goal(Match m) {
         Demo d = new Demo("开始之前", "游戏目标"); d.word = "赫朝一掷千金游戏";
-        // 镜头都在北边高处慢慢推、慢慢挪（11-25「跳得太快了」「怎么全部运到那个球上了」：六个铁球停在南边起点平台头顶，别从那边拍）
-        d.gist(0, 5, "物品栏上的心，就是你的命", "", ring(74, 0, 116), ring(68, 0, 110), v(C, 68, C), 58);
-        d.cap(0.2, 4.8, "每一场游戏输了，都会受伤", "心扣光，就出局", true, false);
-        d.shot(0, 5, ring(68, 0, 110), ring(62, 0, 105), v(C, 68, C), v(C, 68, C), 58, true);
+        // 11-25 用户：「黑场切到玩家自己的视角，然后画面上出现一个红色的圆圈加一个红色的箭头指着自己的心……然后这时候播放一个网络上特别搞笑的音效……冰冰冰」
+        // 前两屏不再拍漏斗场：片名卡停黑之后亮起来就是每个人自己的第一人称（看着坑底），红圈圈住物品栏上的心、红箭头指过去，三下「冰」
+        // 11-25 实拍：主持人、来看的人被放演示挪到了坑底正中间（对着王座）——用户：「应该把我放到那个开场的位置，跟其他玩家站在一起」
+        d.at(-0.8, () -> {   // 片名卡停黑的时候：不在起点平台上的人也送过去，每个人转过来看着坑底、稍微往下看（演完放演示的收尾会送回原处）
+            for (org.bukkit.entity.Player p : m.world.getPlayers()) {
+                Who w = m.whoOf(p);
+                Location l = w != null && w != m.host && w.alive ? p.getLocation() : Venue.start(m.world, m.rnd.nextDouble(), m.rnd.nextDouble());
+                double dx = C - l.getX(), dz = C - l.getZ();
+                if (dx * dx + dz * dz < 4) continue;
+                l.setYaw((float) Math.toDegrees(Math.atan2(-dx, dz))); l.setPitch(12); p.teleport(l);
+            }
+        });
+        d.self(0, 10.4);
+        d.cap(0.6, 5.0, "物品栏上的心，就是你的命", "", false, false).heartMark();
+        sfx(m, d, 0.6 + BING_AFTER, "bing", 1f, 1f);   // 大字落下 0.9 秒后三下「冰」：红圈、红箭头、「就是你的命」一下一个（模组 Cine.BING_AFTER 同一个数）
+        d.cap(5.2, 10.0, "每一场游戏输了，都会受伤", "心扣光，就出局", true, false);   // 还是自己的第一人称：红圈留着，最后一颗心空掉
         // 11-25 审查：「六场游戏、1 个人通关」片头已经说过——这里补片头没说的：出局了去哪
-        d.cap(5.1, 10.2, "越往后的游戏，伤得越重", "撑到最后的人，坐上坑底牌桌和主持人决战", false, false);
-        d.shot(5, 10.6, ring(47, 352, 119), ring(45, 6, 118), v(C, 66, C), v(C, 66, C), 60, true);   // 11-25 实拍：r57 高 102 时外圈吊环和指针尖的钢塔横在字幕上；退进吊环里、抬到 118 往下看就干净了
+        // 镜头在北边高处慢慢推（11-25「跳得太快了」「怎么全部运到那个球上了」：六个铁球停在南边起点平台头顶，别从那边拍）
+        d.cap(10.9, 16.0, "越往后的游戏，伤得越重", "撑到最后的人，坐上坑底牌桌和主持人决战", false, false);   // 压黑切回漏斗场（模组在自己视角进出都压黑）
+        d.shot(10.4, 16.4, ring(47, 352, 119), ring(45, 6, 118), v(C, 66, C), v(C, 66, C), 60, true);   // 11-25 实拍：r57 高 102 时外圈吊环和指针尖的钢塔横在字幕上；退进吊环里、抬到 118 往下看就干净了
         return d;
     }
 

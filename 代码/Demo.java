@@ -52,6 +52,19 @@ final class Demo {
         o.add("p", p); o.add("l", l); o.addProperty("f", fov); o.addProperty("e", ease);
         shots.add(o); len = Math.max(len, t1); return this;
     }
+    /**
+     * 切回每个人自己的第一人称（11-25 用户：「黑场切到玩家自己的视角，然后画面上出现一个红色的圆圈加一个红色的箭头指着自己的心」）：
+     * 这段时间模组不接管镜头，物品栏、心照常画，进出都先压黑；走路、转视角照样不动。字幕画在画面中间偏上（底下是物品栏和心）。
+     */
+    Demo self(double t0, double t1) {
+        t0 += off; t1 += off;
+        JsonObject o = new JsonObject(); o.addProperty("a", t0); o.addProperty("b", t1); o.addProperty("self", true);
+        JsonArray p = new JsonArray(); for (int i = 0; i < 6; i++) p.add(i % 3 == 1 ? 77 : 0.5);
+        o.add("p", p); o.add("l", p); o.addProperty("f", 70); o.addProperty("e", false);
+        shots.add(o); len = Math.max(len, t1); return this;
+    }
+    /** 上一句字幕在自己的第一人称里用红圈、红箭头圈住物品栏上的心（模组 Cine.heartMark，三下「冰」对着画面一下一下出来）。 */
+    Demo heartMark() { caps.get(caps.size() - 1).getAsJsonObject().addProperty("h", true); return this; }
     /** 不动的镜头。 */
     Demo still(double t0, double t1, double[] p, double[] l, double fov) { return shot(t0, t1, p, p, l, l, fov, false); }
 
@@ -79,7 +92,7 @@ final class Demo {
     /** 这段演示大概在哪拍：所有镜头看的点的平均（Match.playDemo 用它把离得太远的人的本体挪过来，不然服务器不给他同步示范的人）。 */
     double[] anchor() {
         double x = 0, y = 0, z = 0; int n = 0;
-        for (var e : shots) { var l = e.getAsJsonObject().getAsJsonArray("l"); x += l.get(0).getAsDouble() + l.get(3).getAsDouble(); y += l.get(1).getAsDouble() + l.get(4).getAsDouble(); z += l.get(2).getAsDouble() + l.get(5).getAsDouble(); n += 2; }
+        for (var e : shots) { if (e.getAsJsonObject().has("self")) continue; var l = e.getAsJsonObject().getAsJsonArray("l"); x += l.get(0).getAsDouble() + l.get(3).getAsDouble(); y += l.get(1).getAsDouble() + l.get(4).getAsDouble(); z += l.get(2).getAsDouble() + l.get(5).getAsDouble(); n += 2; }
         return n == 0 ? null : new double[]{x / n, y / n, z / n};
     }
     /** 镜头换机位的时刻：每个镜头开始的那一秒。 */

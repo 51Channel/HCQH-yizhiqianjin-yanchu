@@ -49,7 +49,8 @@ public final class Cine {
     private static boolean on, demo; private static long startAt, endAt; private static float scale = 1, demoLen;
     /** 规则演示（每一场开始前，像影视解说那样把这场游戏怎么玩完整演一遍）：镜头、字幕都是插件发过来的，这里只管放。 */
     private static final List<Shot> DSHOTS = new ArrayList<>();
-    private record Cap(float t0, float t1, int no, String main, String sub, boolean red, boolean gist) {}
+    /** mark：这一句在自己的第一人称里用红圈、红箭头圈住物品栏上的心（插件 Demo.heartMark）。 */
+    private record Cap(float t0, float t1, int no, String main, String sub, boolean red, boolean gist, boolean mark) {}
     private static final List<Cap> DCAPS = new ArrayList<>();
     private static String dKick = "", dTitle = "", dWord = "游戏规则";
     /** 演示开头的黑场片名卡有几秒（插件发 pre；片名在 SLAM 秒砸下来，pre 秒硬切进场景）。 */
@@ -60,7 +61,10 @@ public final class Cine {
 
     // ================= 镜头表 =================
     /** 一个镜头：t0–t1（正常节奏的秒）机位从 p0 挪到 p1、看的点从 l0 挪到 l1；ease = 两头慢中间快（长镜头），否则匀速（快切）。 */
-    private record Shot(float t0, float t1, double[] p0, double[] p1, double[] l0, double[] l1, float fov, boolean ease) {}
+    /** self：这一段不接管镜头，就是自己的第一人称（插件 Demo.self；物品栏、心照常画）。 */
+    private record Shot(float t0, float t1, double[] p0, double[] p1, double[] l0, double[] l1, float fov, boolean ease, boolean self) {
+        Shot(float t0, float t1, double[] p0, double[] p1, double[] l0, double[] l1, float fov, boolean ease) { this(t0, t1, p0, p1, l0, l1, fov, ease, false); }
+    }
     private static final List<Shot> SHOTS = new ArrayList<>();
     private static double[] v(double x, double y, double z) { return new double[]{x, y, z}; }
     /** 漏斗场极坐标（和插件 Venue.P 一样：0 度正北、顺时针）。 */
@@ -108,10 +112,10 @@ public final class Cine {
                 DSHOTS.clear(); DCAPS.clear();
                 for (JsonObject s : arr(o, "shots")) {
                     double[] p = nums(s, "p"), l = nums(s, "l");
-                    DSHOTS.add(new Shot((float) dbl(s, "a", 0), (float) dbl(s, "b", 1), v(p[0], p[1], p[2]), v(p[3], p[4], p[5]), v(l[0], l[1], l[2]), v(l[3], l[4], l[5]), (float) dbl(s, "f", 60), b(s, "e")));
+                    DSHOTS.add(new Shot((float) dbl(s, "a", 0), (float) dbl(s, "b", 1), v(p[0], p[1], p[2]), v(p[3], p[4], p[5]), v(l[0], l[1], l[2]), v(l[3], l[4], l[5]), (float) dbl(s, "f", 60), b(s, "e"), b(s, "self")));
                 }
                 int n = 0;
-                for (JsonObject s : arr(o, "caps")) DCAPS.add(new Cap((float) dbl(s, "a", 0), (float) dbl(s, "b", 1), b(s, "x") ? 0 : ++n, s(s, "m", ""), s(s, "s", ""), b(s, "r"), b(s, "g")));
+                for (JsonObject s : arr(o, "caps")) DCAPS.add(new Cap((float) dbl(s, "a", 0), (float) dbl(s, "b", 1), b(s, "x") ? 0 : ++n, s(s, "m", ""), s(s, "s", ""), b(s, "r"), b(s, "g"), b(s, "h")));
                 dKick = s(o, "kick", ""); dTitle = s(o, "title", ""); dWord = s(o, "word", "游戏规则"); dPre = (float) dbl(o, "pre", 0);
                 demoLen = i(o, "len", 600) / 20f; scale = 1; demo = true;
                 startAt = now(); endAt = 0; on = !DSHOTS.isEmpty(); hold = false; bankDone = BANK_T.length; stopMusic(); synced = false; lastT = 0;
@@ -190,6 +194,7 @@ public final class Cine {
         List<Shot> list = demo ? DSHOTS : SHOTS;
         float t = t(); Shot sh = list.get(0);
         for (Shot s : list) if (t >= s.t0) sh = s;
+        if (sh.self) return null;   // 自己的第一人称：不接管
         float k = Math.max(0, Math.min(1, (t - sh.t0) / (sh.t1 - sh.t0)));
         if (sh.ease) k = (float) (0.5 - 0.5 * Math.cos(Math.PI * k));
         double[] p = lerp(sh.p0, sh.p1, k), l = lerp(sh.l0, sh.l1, k);
@@ -204,6 +209,13 @@ public final class Cine {
         Shot sh = list.get(0); float t = t();
         for (Shot s : list) if (t >= s.t0) sh = s;
         return sh.fov;
+    }
+    /** 规则演示这会儿是不是切回了自己的第一人称（插件 Demo.self）：镜头、视野、手、物品栏都照常。 */
+    public static boolean selfView() {
+        if (!active() || !demo || DSHOTS.isEmpty()) return false;
+        float t = t(); Shot sh = DSHOTS.get(0);
+        for (Shot s : DSHOTS) if (t >= s.t0) sh = s;
+        return sh.self;
     }
     private static double[] lerp(double[] a, double[] b, float k) { return v(a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k); }
 
@@ -258,6 +270,7 @@ public final class Cine {
         }
         float t = t();
         float bars = (float) h * (demo ? 0.12f * out(span(t, 0, 0.5f)) : 0.105f);   // 上下黑边（宽银幕；演示开头从上下合进来）
+        if (demo && t >= dPre && selfView()) bars = 0;   // 自己的第一人称：不压黑边（底下是物品栏和心），进出都在黑里换
         rect(g, 0, 0, w, bars, solid(0x000000)); rect(g, 0, h - bars, w, bars, solid(0x000000));
         if (demo) { demoText(g, w, h, bars, t); return; }
         opSounds(t);
@@ -336,15 +349,105 @@ public final class Cine {
     private static void demoText(GuiGraphics g, int w, int h, float bars, float t) {
         float L = demoLen;
         if (t < dPre) { titleCard(g, w, h, t); return; }
-        film(g, w, h, t);
+        boolean self = selfView();
+        if (self) selfMarks(g, w, h, t); else film(g, w, h, t);   // 自己的第一人称：不加胶片暗角颗粒，像平时玩的时候一样；心和红圈画在这里
         float up = 1 - ease(span(t, dPre, dPre + 1.0f)); if (up > 0) rect(g, 0, 0, w, h, a(0x000000, up));   // 11-25 气口：片名卡停一拍黑之后，场景从黑里慢慢亮起来（字画在它上面）
-        text(g, Face.MEDIUM, spaced(dTitle + " · " + dWord), w / 2f, (bars - 8) / 2, 0.7f, 1, INK_QUIET, span(t, dPre + 0.3f, dPre + 0.9f), false);
+        if (!self) text(g, Face.MEDIUM, spaced(dTitle + " · " + dWord), w / 2f, (bars - 8) / 2, 0.7f, 1, INK_QUIET, span(t, dPre + 0.3f, dPre + 0.9f), false);
         Cap newest = null;   // 同一时刻只画最新开始的那一句
         for (Cap c : DCAPS) if (t >= c.t0 && (newest == null || c.t0 >= newest.t0)) newest = c;
         for (Cap c : DCAPS) if (c.red && t >= c.t0 && t < c.t0 + 1.4f) redPulse(g, w, h, 1 - (t - c.t0) / 1.4f);
-        if (newest != null && t <= newest.t1 + 0.4f) { if (newest.gist) tagline(g, w, h, t, newest); else subtitle(g, w, h, bars, t, newest); }
+        if (newest != null && t <= newest.t1 + 0.4f) { if (self) selfCap(g, w, h, t, newest); else if (newest.gist) tagline(g, w, h, t, newest); else subtitle(g, w, h, bars, t, newest); }
+        float sk = 0;   // 进出自己的第一人称：先压黑、在黑里换、再亮起来（和片头换镜头一样的气口）
+        for (int i = 1; i < DSHOTS.size(); i++) if (DSHOTS.get(i).self != DSHOTS.get(i - 1).self) sk = Math.max(sk, dip(t, DSHOTS.get(i).t0, 0.35f, 0.15f, 0.5f));
+        if (sk > 0) rect(g, 0, 0, w, h, a(0x000000, sk));
         float end = ease(span(t, L - 0.9f, L - 0.1f)); if (end > 0) rect(g, 0, 0, w, h, a(0x000000, end));   // 11-25 结尾不再硬切黑，0.8 秒淡下去
     }
+    // ================= 自己的第一人称：红圈、红箭头圈住物品栏上的心 =================
+    /**
+     * 11-25 用户：「黑场切到玩家自己的视角，然后画面上出现一个红色的圆圈加一个红色的箭头指着自己的心……然后这时候播放一个网络上特别搞笑的音效……冰冰冰」。
+     * 网上那种手画的红圈：大字「物品栏上的心」先落下，BING_AFTER 秒后插件放三下「冰」（zd.bing，主播给的网上原版，三下在 0.02 / 0.17 / 0.33 秒），
+     * 第一下红圈一笔画出来，第二下红箭头从字底下扎过去，第三下红字「就是你的命」砸下来。下一屏（输了受伤）红圈留着，最后一颗心空掉。
+     * 心是这里自己画的（原版的位置：物品栏左上），主持人、来看的人也看得到一排心被圈住。
+     */
+    static final float BING_AFTER = 0.9f, BING_GAP = 0.155f;   // zd.bing 是主播给的网上原版音效（11-25「冰用这个音效」），三下间隔 0.155 秒
+    private static final int MEME_RED = 0xF0281E;
+    private static final Identifier HEART_HALF = Identifier.withDefaultNamespace("hud/heart/half");
+    /** 原版那一排心：左边 x、上边 y、几颗。 */
+    private static float[] heartRow(int w, int h) {
+        var p = Minecraft.getInstance().player;
+        int n = p == null ? 10 : Math.max(1, Math.min(10, (int) Math.ceil(p.getMaxHealth() / 2)));
+        return new float[]{w / 2f - 91, h - 39, n};
+    }
+    private static void selfMarks(GuiGraphics g, int w, int h, float t) {
+        Cap mark = null, after = null;
+        for (Cap c : DCAPS) { if (c.mark) mark = c; else if (mark != null && after == null && c.t0 > mark.t0) after = c; }
+        float[] row = heartRow(w, h); int n = (int) row[2];
+        var p = Minecraft.getInstance().player;
+        boolean real = p != null && !p.isSpectator() && !p.isCreative() && p.getHealth() > 0;
+        float hp = real ? p.getHealth() : n * 2;
+        // 下一屏「输了，会受伤」：最后一颗满的心空掉，红一下
+        float lose = after != null && after.red ? span(t, after.t0 + 0.5f, after.t0 + 0.6f) : 0;
+        int lastFull = (int) Math.ceil(hp / 2) - 1;
+        for (int i = 0; i < n; i++) {
+            int x = Math.round(row[0] + i * 8), y = Math.round(row[1]);
+            g.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, Brand.HEART_EMPTY, x, y, 9, 9);
+            float v = hp - i * 2;
+            if (i == lastFull && lose > 0) {
+                float fl = 1 - span(t, after.t0 + 0.6f, after.t0 + 1.2f);
+                if (fl > 0) rect(g, x - 1, y - 1, 11, 11, a(MEME_RED, 0.55f * fl));
+                continue;
+            }
+            if (v >= 2) g.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, Brand.HEART_FULL, x, y, 9, 9);
+            else if (v >= 1) g.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, HEART_HALF, x, y, 9, 9);
+        }
+        if (mark == null) return;
+        float b0 = mark.t0 + BING_AFTER, al = 1 - span(t, mark.t1 + 0.1f, mark.t1 + 0.5f) * 0.25f;   // 下一屏红圈淡一点、还留着
+        float cx = row[0] + (n - 1) * 4 + 4.5f, cy = row[1] + 4.5f, rx = (n - 1) * 4 + 4.5f + 13, ry = 12.5f;
+        float ck = out(span(t, b0, b0 + 0.16f));
+        if (ck > 0) {   // 手画的圈：起笔在左上，转一圈多一点收笔，半径有一点不匀
+            float pop = 1 + 0.14f * (1 - out(span(t, b0, b0 + 0.22f)));
+            int steps = 260; float end = ck * 1.08f;
+            for (int i = 0; i <= steps * end; i++) {
+                double th = Math.PI * 1.15 + 2 * Math.PI * i / steps, wob = 1 + 0.05 * Math.sin(th * 2 + 0.6) + 0.03 * (i / (double) steps);
+                float x = cx + (float) (Math.cos(th) * rx * wob * pop), y = cy - 1.5f + (float) (Math.sin(th) * ry * wob * pop);
+                rect(g, x - 1.1f, y - 1.1f, 2.2f, 2.2f, a(MEME_RED, al));
+            }
+        }
+        if (t >= mark.t1 + 0.4f) return;   // 箭头只在这一屏
+        float ak = out(span(t, b0 + BING_GAP, b0 + BING_GAP + 0.12f)), aal = 1 - span(t, mark.t1, mark.t1 + 0.4f);
+        if (ak > 0) {   // 从大字底下往左下扎到圈的右上边
+            float x0 = w / 2f - 6, y0 = h * 0.36f + 38, x1 = cx + rx * 0.55f, y1 = cy - ry - 4;
+            float ex = x0 + (x1 - x0) * ak, ey = y0 + (y1 - y0) * ak;
+            stroke(g, x0, y0, ex, ey, 2.6f, a(MEME_RED, aal));
+            if (ak >= 1) {
+                double ang = Math.atan2(y1 - y0, x1 - x0);
+                for (int s = -1; s <= 1; s += 2) { double b = ang + Math.PI + s * 0.5; stroke(g, x1, y1, x1 + (float) Math.cos(b) * 11, y1 + (float) Math.sin(b) * 11, 2.6f, a(MEME_RED, aal)); }
+            }
+        }
+    }
+    /** 一笔粗线：沿线一个个小方块盖过去。 */
+    private static void stroke(GuiGraphics g, float x0, float y0, float x1, float y1, float th, int col) {
+        float len = (float) Math.hypot(x1 - x0, y1 - y0); int n = Math.max(1, (int) (len * 2));
+        for (int i = 0; i <= n; i++) { float k = i / (float) n; rect(g, x0 + (x1 - x0) * k - th / 2, y0 + (y1 - y0) * k - th / 2, th, th, col); }
+    }
+    /** 自己第一人称里的字：画面中间偏上（底下是物品栏和心），逗号前后两行大字；圈心那句第二行是红的、第三下「冰」砸下来。 */
+    private static void selfCap(GuiGraphics g, int w, int h, float t, Cap c) {
+        float out = 1 - span(t, c.t1, c.t1 + 0.4f); if (out <= 0.01f) return;
+        String m = c.main; int cut = m.indexOf('，'); String p1 = cut < 0 ? m : m.substring(0, cut), p2 = cut < 0 ? "" : m.substring(cut + 1);
+        float sc = Math.min(1.85f, (w - 80) / Math.max(1f, Math.max(width(Face.DISPLAY, p1), width(Face.DISPLAY, p2))));
+        float lh = (D_UP + D_DN) * sc + 10, y1 = h * 0.36f - lh / 2, y2 = y1 + lh;
+        float p2at = c.mark ? BING_AFTER + 2 * BING_GAP : TAG_P2;
+        band(g, w, y1 - D_UP * sc - 30, (p2.isEmpty() ? y1 : y2) + D_DN * sc + (c.sub.isEmpty() ? 20 : 40), 0.62f * out * span(t, c.t0 - 0.1f, c.t0 + 0.25f));
+        dropLine(g, w, y1, sc, t - c.t0, out, paint(p1, INK, c.red));
+        if (!p2.isEmpty()) dropLine(g, w, y2, sc, t - c.t0 - p2at, out, c.mark ? new Object[]{p2, MEME_RED} : paint(p2, INK, c.red));
+        if (!c.sub.isEmpty()) line(g, Face.MEDIUM, w / 2f, y2 + D_DN * sc + 18, 0.95f, span(t, c.t0 + TAG_SUB, c.t0 + TAG_SUB + 0.4f) * out, paint(c.sub, INK_SOFT, true));
+    }
+    private static void dropLine(GuiGraphics g, int w, float y, float sc, float dt, float out, Object[] parts) {
+        if (dt < 0) return;
+        float k = 1 - out(span(dt, 0, 0.18f)), s = sc * (1 + 0.16f * k);
+        line(g, Face.DISPLAY, w / 2f, y - 4 * k, s, span(dt, 0, 0.06f) * out, parts);
+    }
+
     /**
      * 黑场片名卡。11-23 换掉了「砸下来 + 白闪 + 画面一抖」（「好像打雷一样的那个特效其实有点弱智，我不喜欢，换一种演出效果」）：
      * 片名的字先散得很开、淡淡地出来，一口气往中间收拢落定（电影片头那种字距收拢），最后小字「怎么玩」。不闪、不抖、不放大。
